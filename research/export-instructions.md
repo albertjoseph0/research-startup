@@ -36,10 +36,9 @@ Funding Type, Announced Date, Money Raised (in USD), Pre-Money Valuation (in USD
 Post-Money Valuation (in USD), Lead Investors, Number of Investors, Organization Industries,
 Organization Location, Funding Status, Total Funding Amount (in USD)
 
-Windows (half-years; about 1,100 rows each, so you will need to split most of them into quarters):
-2015-01-01→2015-06-30 `rounds_2015H1.csv`, 2015-07-01→2015-12-31 `rounds_2015H2.csv`,
-… through 2019-07-01→2019-12-31 `rounds_2019H2.csv`.
-If a half-year is over 1,000 rows, use quarters instead and name them `rounds_2015Q1.csv` etc.
+Windows: calendar quarters (about 570 rows each), 20 files:
+2015-01-01→2015-03-31 `rounds_2015Q1.csv`, 2015-04-01→2015-06-30 `rounds_2015Q2.csv`,
+… through 2019-10-01→2019-12-31 `rounds_2019Q4.csv`.
 
 ## Dataset 2 — Acquisitions (expected total ≈ 14,493 rows)
 
