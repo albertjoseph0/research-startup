@@ -63,6 +63,43 @@ conservative: some undisclosed exits are modest wins.
    risk.** The decision variable that matters for "2–3 tries per career" is a
    time-adjusted multiple, which these queries do not yet measure.
 
+## Query 4 — time to liquidity (same cohort as query 3)
+
+Request ID `35908fbe96ffb536146589be7b6fb3e5`. Cost ≈ 82k data tokens.
+
+"Cash 5×" = IPO or acquisition within 4 years of the entry round, at a disclosed value
+≥5× the entry post-money. 95% Wilson intervals in brackets.
+
+| Entry | Exited (any time) | Median years to exit | Liquid ≤4y | Liquid ≤6y | Cash 5× ≤4y | P(cash 5× in 3 tries) | Paper ≥5× (query 3) |
+|---|---|---|---|---|---|---|---|
+| Series A | 23.6% | 4.9 | 9.0% | 15.3% | 0.87% (0.7–1.1) | 2.6% | 29.4% |
+| Series B | 30.9% | 4.4 | 13.7% | 20.9% | 1.26% (0.9–1.8) | 3.7% | 26.3% |
+| Series C | 39.7% | 4.4 | 17.5% | 27.5% | 0.89% (0.5–1.6) | 2.7% | 18.6% |
+| Series D | 44.8% | 3.7 | 24.2% | 32.8% | 4.76% (3.3–6.8) | 13.6% | 17.5% |
+| Series E | 58.0% | 3.5 | 32.6% | 46.6% | 6.06% (3.8–9.6) | 17.1% | 14.4% |
+
+Findings:
+
+1. Liquidity rises monotonically with stage: 9% of Series A entrants are liquid within
+   4 years versus 33% at Series E.
+2. On the time-adjusted measure Moskovitz's argument actually needs (a big, cashed-out
+   outcome within one "try"), Series D/E beat A–C by ~4–5×, and the intervals do not overlap.
+   A–C are statistically indistinguishable from each other at ~1%.
+3. Paper and cash rankings invert: A is best on paper (29% ≥5×) and worst in cash (<1%
+   within 4 years).
+4. Even the best stage gives ~17% odds of a cashed 5× across three 4-year tries, far
+   below "within 2 or 3 tries, and likely on the first one" for an unselected company.
+   The argument depends on picking well within the stage, not on the stage itself.
+
+Confounds specific to this query:
+
+- **Bubble timing.** D/E rounds from 2015–2019 plus ~4 years lands exits in the 2020–2021
+  IPO/SPAC window at peak valuations; A–C entrants mostly missed that window. The D/E
+  advantage may be partly a vintage effect. Query 3 of the drift study below tests this.
+- **Disclosure bias.** IPOs always disclose a valuation; acquisitions often do not. Later
+  stages exit more by IPO, so a disclosed ≥5× exit is easier to observe for D/E.
+- Small counts for D/E (27 and 16 events).
+
 ## Caveats
 
 - Requires a disclosed post-money valuation at entry; disclosure skews toward prominent companies.
@@ -73,8 +110,7 @@ conservative: some undisclosed exits are modest wins.
 
 ## Next queries (each ≈ 80–90k data tokens)
 
-1. Time-adjusted: per A–E cohort, median years from entry round to IPO/acquisition, and
-   share liquid within 4 years.
+1. ~~Time-adjusted~~ — done, query 4.
 2. Zombie correction: share of "still private" with no funding round since 2023-01-01.
 3. Drift: query 3 split into 2015–2016 vs 2018–2019 cohorts.
 4. Sector: query 3 split AI vs non-AI.
