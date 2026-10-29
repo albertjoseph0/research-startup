@@ -201,7 +201,17 @@ Then report back to the user with:
 
 ---
 
-## 9. Next month (after the export allowance resets)
+## 9. Lessons from the first run (2026-10-29)
+
+- Most Recent Valuation Range, IPO Prediction Tier and Acquisition Prediction Tier are
+  visible but blocked from export. Do not add them to export columns.
+- Actively Hiring was blank for almost every company; Growth/Heat Score export only as tiers.
+- The Phase 2 rounds search returned 5,718 rows from 2022, so it had to be cut to rounds
+  after 2026-07-01, which gave valuations for only 93 of 406 companies. Prefer collecting
+  valuations for the shortlist from profile pages (Phase 5) over a narrow rounds export.
+- Scoring (Phases 3–4) is done by `research/score_companies.py`, not in the sheet.
+
+## 10. Next month (after the export allowance resets)
 
 Re-run Phase 1 with **Last funding date** on or after the date of the previous run,
 to pick up only newly funded companies. Merge these into `raw_companies`, re-score,
