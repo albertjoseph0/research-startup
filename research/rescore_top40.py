@@ -22,6 +22,8 @@ RED_FLAGS = {
     "Commure": (0.95, "ended AI referral payments to customers (STAT, Aug 2026)"),
     "EliseAI": (0.95, "RealPage halted its EliseAI integration (Oct 2026)"),
     "Also": (0.95, "e-bike deliveries months late, reported order cancellations"),
+    "Medallion": (0.85, "secondary quotes imply ~$114M vs $440M+ estimates (Sep 2026)"),
+    "Vouch": (0.95, "valuation undisclosed; insurance carrier reportedly sold to Hiscox (2025)"),
 }
 
 
@@ -51,7 +53,11 @@ def main(scored_path, top40_path, out_dir):
             momentum = (val / prev) ** (1 / years)
         rows.append({**base, **t, "name": name, "checked_valuation": val, "momentum_raw": momentum})
 
-    kept = [r for r in rows if not (r["checked_valuation"] and r["checked_valuation"] > MAX_VALUATION)]
+    kept = [
+        r for r in rows
+        if "EXCLUDED" not in r["company"]
+        and not (r["checked_valuation"] and r["checked_valuation"] > MAX_VALUATION)
+    ]
     momentum = percentiles([r["momentum_raw"] for r in kept])
     for r, m in zip(kept, momentum):
         r["room_to_grow"] = room_to_grow(r["checked_valuation"])
