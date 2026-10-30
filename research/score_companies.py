@@ -1,6 +1,6 @@
 """Score a Crunchbase company export using the rules in browser-agent-instructions.md.
 
-Usage: python3 score_companies.py COMPANIES.csv ROUNDS.csv TOP40.csv OUT.csv
+Usage: python3 score_companies.py COMPANIES.csv ROUNDS.csv[,ROUNDS2.csv...] PROFILE_CHECKS.csv OUT.csv
 """
 import re
 import sys
@@ -53,7 +53,7 @@ def room_to_grow(v):
 
 def main(companies_path, rounds_path, top40_path, out_path):
     c = pd.read_csv(companies_path)
-    r = pd.read_csv(rounds_path)
+    r = pd.concat([pd.read_csv(p) for p in rounds_path.split(",")]).drop_duplicates("Transaction Name URL")
     t = pd.read_csv(top40_path)
     t["name"] = t["company"].str.split(" - ").str[0]
 
