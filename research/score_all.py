@@ -17,6 +17,8 @@ TOP_INVESTORS = [
 LAYOFF_CUTOFF = "2025-11-01"
 MAX_VALUATION = 10e9
 TODAY = pd.Timestamp("2026-10-30")
+# Red flags that end standalone upside.
+ENDED = r"acquired by|acquisition by|Chapter 11|bankruptcy"
 # Valuations missing from the exports but widely reported above the $10B gate.
 KNOWN_OVER_10B = {
     "Anysphere (Cursor)": "valuation over $10B ($29.3B, Nov 2025 reporting)",
@@ -34,6 +36,20 @@ def parse_money(text):
     if not m:
         return None
     return float(m.group(1)) * (1e9 if m.group(2) == "B" else 1e6)
+
+
+def prior_valuation(text):
+    """Previous separately priced round. When the agent marked the listed prior as a
+    tranche of the same round, use the round it names as the last separate one."""
+    text = str(text)
+    marker = "last genuinely separate"
+    if marker in text:
+        text = text[text.index(marker):]
+    elif "NOT a separate" in text:
+        return None
+    if "UNVERIFIABLE" in text.split(" - step-up")[0]:
+        return None
+    return parse_money(text)
 
 
 def pct(series):
@@ -64,11 +80,9 @@ def main(companies_path, rounds_path, top40_path, out_path):
     c["valuation_source"] = c["valuation"].notna().map({True: "rounds export", False: ""})
     hand = t.set_index("name")
     # The fact-check pass marks figures it could not confirm; treat those as unknown.
-    unverified = r"UNVERIFIABLE|NOT a separate"
     hand_val = hand["latest_valuation"].map(parse_money).mask(
-        hand["latest_valuation"].str.contains(unverified, na=False))
-    hand_prev = hand["previous_valuation"].map(parse_money).mask(
-        hand["previous_valuation"].str.contains(unverified, na=False))
+        hand["latest_valuation"].str.contains("UNVERIFIABLE", na=False))
+    hand_prev = hand["previous_valuation"].map(prior_valuation)
     in_hand = c["Organization Name"].isin(hand_val.dropna().index)
     c.loc[in_hand, "valuation"] = c.loc[in_hand, "Organization Name"].map(hand_val)
     c.loc[in_hand, "valuation_source"] = "top-40 profile check"
@@ -80,6 +94,9 @@ def main(companies_path, rounds_path, top40_path, out_path):
     c["excluded"] = ""
     c.loc[c["Last Layoff Mention Date"].fillna("") >= LAYOFF_CUTOFF, "excluded"] = "layoff since " + LAYOFF_CUTOFF
     c.loc[(c["excluded"] == "") & (c["valuation"] > MAX_VALUATION), "excluded"] = "valuation over $10B"
+    ended = hand["red_flags"].str.contains(ENDED, case=False, na=False)
+    for name in ended[ended].index:
+        c.loc[(c["excluded"] == "") & (c["Organization Name"] == name), "excluded"] = "acquired or bankrupt"
     for name, reason in KNOWN_OVER_10B.items():
         c.loc[(c["excluded"] == "") & (c["Organization Name"] == name), "excluded"] = reason
     c["check_valuation"] = c["valuation"].isna() & (c["total_funding"] > 1.5e9)
