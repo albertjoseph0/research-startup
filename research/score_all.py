@@ -85,7 +85,10 @@ def fragility_flags(s, hand):
         "down round": (s["step_up"] < 1) | hand_down,
         "layoff in last 2 years": layoff >= (TODAY - pd.Timedelta(days=730)).strftime("%Y-%m-%d"),
         "no new round in 2 years": last_round < TODAY - pd.Timedelta(days=730),
-        "sale talks": s.get("sale_talks", pd.Series(False, index=s.index)).eq(True),
+        "sale talks": s.get("sale_talks", pd.Series(False, index=s.index)).eq(True)
+                      | s.get("research_sale_talks", pd.Series(False, index=s.index)).eq(True),
+        "layoff reported in news": s.get("research_layoffs", pd.Series(False, index=s.index)).eq(True),
+        "down round reported in news": s.get("research_down_round", pd.Series(False, index=s.index)).eq(True),
     }
     return pd.Series(["; ".join(k for k, m in flags.items() if m[i]) for i in s.index], index=s.index)
 
@@ -150,7 +153,7 @@ WEIGHTS = {"web": 0.15, "hiring": 0.10, "trend": 0.05, "pace": 0.10, "step": 0.1
 AI_INDUSTRIES = r"Artificial Intelligence|Machine Learning|Generative AI|Agentic AI|Foundational AI"
 
 
-def load_research(job1_path, job2_path, job3_path):
+def load_research(job1_path, job2_path, job3_path, red_flags_path=None):
     """Per-company research signals keyed by Crunchbase URL."""
     frames = [read_all(p) for p in (job1_path, job2_path, job3_path)]
     # Some job rows lost their URL; recover it from another job's row for the same company.
@@ -171,17 +174,22 @@ def load_research(job1_path, job2_path, job3_path):
     out["hiring_growth"] = (out["open_roles"] + 1) / (past + 1)
 
     revenue = pd.to_numeric(j2["revenue_usd"], errors="coerce")
-    out["revenue_usd"] = revenue.where(j2["revenue_type"].isin(REPORTED_REVENUE))
+    # Stale figures understate fast growers, so only use revenue reported in the last year.
+    as_of = pd.to_datetime(j2["as_of_date"], errors="coerce", format="mixed")
+    recent = as_of >= TODAY - pd.Timedelta(days=365)
+    out["revenue_usd"] = revenue.where(j2["revenue_type"].isin(REPORTED_REVENUE) & recent)
 
     details = j3["tender_offer_details"].fillna("")
     has_tender = ~j3["tender_offer_date"].fillna("None found").str.startswith("None found")
     investors_only = details.str.contains("not employee", case=False)
-    unclear = details.str.contains("not stated|unverified", case=False)
+    # Only doubts about who could sell make a tender "unclear", not other missing details.
+    unclear = details.str.contains(r"eligibility.{0,40}(?:not stated|unstated|unverified)", case=False)
     out["tender"] = pd.Series(np.select(
         [has_tender & ~investors_only & ~unclear, has_tender & ~investors_only & unclear],
         ["employee tender", "tender, eligibility unclear"], ""), index=j3.index)
     ipo = j3["ipo_signal"].fillna("")
     out["ipo_filed"] = ipo.str.contains("filed an S-1", case=False)
+    out["ipo_preparing"] = ipo.str.contains("underwriter", case=False)
     exit_reason = np.select(
         [j3["acquisition_signal"].fillna("").str.contains(EXIT_SIGNAL, case=False),
          ipo.str.contains("IPO priced", case=False),
@@ -189,12 +197,17 @@ def load_research(job1_path, job2_path, job3_path):
         ["acquired, merged or bankrupt", "now public", "going public via SPAC"], "")
     out["exit_reason"] = pd.Series(exit_reason, index=j3.index)
     out["sale_talks"] = j3["acquisition_signal"].fillna("").str.contains(SALE_TALKS, case=False)
+    if red_flags_path:
+        rf = keyed(read_all(red_flags_path))
+        for col in ("layoffs", "down_round", "sale_talks"):
+            out[f"research_{col}"] = ~rf[col].fillna("None found").str.startswith("None found")
     return out
 
 
-def main(companies_path, rounds_path, top40_path, out_path, job1=None, job2=None, job3=None):
+def main(companies_path, rounds_path, top40_path, out_path, job1=None, job2=None, job3=None,
+         red_flags=None):
     c = read_all(companies_path)
-    research = load_research(job1, job2, job3) if job1 else pd.DataFrame()
+    research = load_research(job1, job2, job3, red_flags) if job1 else pd.DataFrame()
     for col in research:
         c[col] = c["Organization Name URL"].map(research[col])
     r = read_all(rounds_path).drop_duplicates("Transaction Name URL")
@@ -276,7 +289,8 @@ def main(companies_path, rounds_path, top40_path, out_path, job1=None, job2=None
     else:
         # Early cash: a proven employee tender or a filed S-1 is direct evidence of liquidity.
         tender = s["tender"].fillna("")
-        s.loc[tender.eq("tender, eligibility unclear"), "liquidity"] = s["liquidity"].clip(lower=0.8)
+        preparing = tender.eq("tender, eligibility unclear") | s["ipo_preparing"].eq(True)
+        s.loc[preparing, "liquidity"] = s.loc[preparing, "liquidity"].clip(lower=0.8)
         s.loc[tender.eq("employee tender") | s["ipo_filed"].eq(True), "liquidity"] = 1.0
         intensity = s["open_roles"] / s["Number of Employees"].map(EMPLOYEE_MIDPOINT)
         growth = s["hiring_growth"].clip(upper=10)
@@ -324,4 +338,4 @@ def main(companies_path, rounds_path, top40_path, out_path, job1=None, job2=None
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:8])
+    main(*sys.argv[1:9])
