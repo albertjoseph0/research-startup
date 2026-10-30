@@ -106,8 +106,9 @@ def main(companies_path, rounds_path, top40_path, out_path):
     last_round = r.groupby("Organization Name").last()
     c["valuation"] = c["Organization Name"].map(last_round["Post-Money Valuation (in USD)"])
     c["valuation_source"] = c["valuation"].notna().map({True: "rounds export", False: ""})
+    # Blank when the source does not say (the browser rounds export has no such field).
     c["valuation_estimated"] = c["Organization Name"].map(
-        last_round["Valuation Source"].eq("c200_estimated"))
+        last_round["Valuation Source"].map({"c200_estimated": True, "c100_confirmed": False}))
     round_prev = r.groupby("Organization Name").apply(previous_round_valuation)
     hand = t.set_index("name")
     # The fact-check pass marks figures it could not confirm; treat those as unknown.
@@ -117,7 +118,13 @@ def main(companies_path, rounds_path, top40_path, out_path):
     in_hand = c["Organization Name"].isin(hand_val.dropna().index)
     c.loc[in_hand, "valuation"] = c.loc[in_hand, "Organization Name"].map(hand_val)
     c.loc[in_hand, "valuation_source"] = "top-40 profile check"
-    c.loc[in_hand, "valuation_estimated"] = False
+    # Hand checks record whether Crunchbase marks the round Confirmed or Estimated;
+    # they also cover valuations taken from the rounds export, which has no such field.
+    hand_estimated = (hand["valuation_date"].str.contains("Estimated", na=False)
+                      | hand["latest_valuation"].str.contains("UNVERIFIABLE", na=False))
+    hand_confirmed = hand["valuation_date"].str.contains("Confirmed", na=False) & ~hand_estimated
+    checked = c["Organization Name"].isin(hand.index[hand_estimated | hand_confirmed])
+    c.loc[checked, "valuation_estimated"] = c.loc[checked, "Organization Name"].map(hand_estimated)
     prev = c["Organization Name"].map(hand_prev).fillna(c["Organization Name"].map(round_prev))
     c["step_up"] = c["valuation"] / prev
 
