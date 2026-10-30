@@ -5,6 +5,7 @@ Usage: python3 score_all.py COMPANIES.csv ROUNDS.csv[,ROUNDS2.csv...] PROFILE_CH
 import re
 import sys
 
+import numpy as np
 import pandas as pd
 
 TOP_INVESTORS = [
@@ -57,14 +58,30 @@ def pct(series):
     return series.rank(pct=True).fillna(0.5)
 
 
+# Price range where a 5x gain is most reachable. The 2015-19 Series D/E cohorts that most
+# often turned 5x into cash within 4 years joined at median valuations of $327M and $584M.
+SWEET_SPOT = (300e6, 1.5e9)
+
+
 def room_to_grow(v):
+    """1.0 inside the sweet spot, falling on a log scale outside it; unknown is neutral."""
     if pd.isna(v):
         return 0.5
-    if v < 300e6:
-        return 0.6
-    if v <= 3e9:
+    low, high = SWEET_SPOT
+    if v < low:  # cheaper but riskier: 0.5 at $100M
+        return float(np.clip(1 - 0.5 * np.log(low / v) / np.log(3), 0.3, 1.0))
+    if v <= high:
         return 1.0
-    return 0.5
+    return float(np.clip(1 - 0.9 * np.log(v / high) / np.log(MAX_VALUATION / high), 0.1, 1.0))
+
+
+def price_band(v):
+    if pd.isna(v):
+        return "unknown"
+    for limit, label in [(300e6, "under $300M"), (1.5e9, "$300M-$1.5B"), (3e9, "$1.5B-$3B")]:
+        if v < limit:
+            return label
+    return "$3B-$10B"
 
 
 def main(companies_path, rounds_path, top40_path, out_path):
@@ -114,19 +131,18 @@ def main(companies_path, rounds_path, top40_path, out_path):
     investors = s["Top 5 Investors"].fillna("") + ", " + s["Lead Investors"].fillna("")
     s["investors"] = investors.map(lambda x: float(any(i in x for i in TOP_INVESTORS)))
 
-    s["score"] = (0.20 * s["web"] + 0.10 * s["trend"] + 0.15 * s["pace"] + 0.10 * s["step"]
-                  + 0.15 * s["room"] + 0.10 * s["liquidity"] + 0.10 * s["investors"]
-                  ) / 0.90  # hiring (10%) dropped: under 1% of rows have it
-    tier1 = s["Last Funding Type"].isin(["Series D", "Series E", "Series F"])
-    s["tier"] = tier1.map({True: 1, False: 2})
-    s["final_score"] = s["score"] * tier1.map({True: 1.0, False: 0.85})
+    # Entry price, not round name, sets the preference: round valuations are 3-5x higher
+    # than in 2015-19, so "Series D/E" no longer means a ~$500M company.
+    s["final_score"] = (0.20 * s["web"] + 0.10 * s["trend"] + 0.15 * s["pace"] + 0.10 * s["step"]
+                        + 0.25 * s["room"] + 0.10 * s["liquidity"] + 0.10 * s["investors"])
+    s["price_band"] = s["valuation"].map(price_band)
 
     s = s.sort_values("final_score", ascending=False)
     s.insert(0, "rank", range(1, len(s) + 1))
     s["agent_top40_rank"] = s["Organization Name"].map(hand["rank"])
     for col in ["red_flags", "5x_check", "why_it_could_be_very_large"]:
         s[col] = s["Organization Name"].map(hand[col])
-    cols = ["rank", "Organization Name", "Organization Name URL", "tier", "final_score",
+    cols = ["rank", "Organization Name", "Organization Name URL", "price_band", "final_score",
             "valuation", "valuation_source", "step_up", "check_valuation", "Last Funding Type",
             "Last Funding Date", "Number of Employees", "Estimated Revenue Range",
             "Monthly Visits Growth", "Trend Score (90 Days)", "web", "trend", "pace", "step",
