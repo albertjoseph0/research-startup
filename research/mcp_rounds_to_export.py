@@ -14,7 +14,9 @@ import pandas as pd
 def funding_type(investment_type):
     if investment_type == "series_unknown":
         return "Venture - Series Unknown"
-    return "Series " + investment_type.split("_")[1].upper()
+    if investment_type.startswith("series_"):
+        return "Series " + investment_type.split("_")[1].upper()
+    return investment_type.replace("_", " ").title()  # seed, pre_seed, undisclosed, ...
 
 
 def main(mcp_path, companies_path, out_path):
