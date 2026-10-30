@@ -80,3 +80,56 @@ For each strategy (entry price band × years per try), compute the probability o
 least one cashed ≥10× (and ≥20×) outcome within 10 years. Do it for independent tries
 and for correlated tries. Combine with grant size (your share) to turn multiples into
 dollars, and compare with the founder path's tail from published data.
+
+## 6. Changes made (2026-10-30)
+
+**Pool instead of ranking.** `score_all.py` now groups companies into tiers instead of
+relying on rank order:
+
+| Tier | Rule |
+|---|---|
+| A – core pool | No fragility flag, and in the top 25 in at least 80% of 2,000 runs where every weight is scaled by a random 0.5–1.5 |
+| B – wider pool | No fragility flag, and in the top 50 in at least 50% of runs |
+| C – rest | Everything else without a fragility flag |
+| F – fragile | Any fragility flag (below) |
+
+Within a tier, companies are treated as roughly equal bets. Choose between them on your
+own terms and fit (grant size, exercise window, tender history, software roles, sector
+spread), not on small score differences.
+
+**Fragility screens** (remove exposures that cap the upside or add downside):
+
+- money raised is half or more of the latest valuation, so a mid-sized sale can wipe out employee stock
+- a down round
+- a layoff mention in the last 2 years
+- no new round in 2 years
+- reported sale talks
+
+**Sector column** (AI / non-AI), to spread tries across sectors, since tries in the same
+sector and cycle move together.
+
+**`tail_analysis.py`** reads threshold counts (such as the Nov 1 query results) and writes:
+- survival curves on log-log axes (a straight line means a power-law tail)
+- the tail slope with a bootstrap range
+- extrapolated odds at 10×, 20×, 50× and 100×, over the bootstrap range and over a fixed stress range (`--stress-alpha 1.1,1.5`) for uncertainty about the slope itself
+- the chance of at least one hit in N tries, both independent and moving together (`--rho`)
+
+No averages are reported.
+
+## 7. Personal rules to decide before applying (proposal)
+
+These follow from fat tails, ruin avoidance and the barbell idea in Taleb's *Skin in
+the Game* and *Antifragile*:
+
+1. **Fixed option budget.** Decide in advance the most cash you will ever spend buying
+   options, plus the tax on them. Never borrow for it.
+2. **Keep only winners.** When leaving a company, buy vested options only if it shows
+   winning signals: a new round at a higher valuation, a tender above the previous
+   price, or fast revenue growth. Otherwise let them go.
+3. **Prefer long exercise windows and tender offers.** They let you keep the tail
+   without spending the budget early. Ask about both at every offer.
+4. **Sell part, keep part.** When a tender comes, sell some (median tenders allow about
+   20%) to lock in cash and keep the rest for the tail.
+5. **Spread tries across sectors** rather than three AI companies in a row.
+6. **No ruin moves.** No salary you can't live on, no tax bill on stock you can't sell,
+   no borrowing against illiquid shares.

@@ -73,6 +73,39 @@ def read_all(paths):
     return pd.concat([pd.read_csv(p) for p in paths.split(",")], ignore_index=True)
 
 
+def fragility_flags(s, hand):
+    """Reasons a company's equity is fragile: upside capped or downside added."""
+    funding_ratio = s["total_funding"] / s["valuation"]
+    layoff = s["Last Layoff Mention Date"].fillna("")
+    last_round = pd.to_datetime(s["Last Funding Date"], errors="coerce", format="mixed")
+    hand_down = s["Organization Name"].map(
+        hand["red_flags"].str.contains("down round", case=False, na=False)).eq(True)
+    flags = {
+        "raised half or more of valuation": funding_ratio >= 0.5,
+        "down round": (s["step_up"] < 1) | hand_down,
+        "layoff in last 2 years": layoff >= (TODAY - pd.Timedelta(days=730)).strftime("%Y-%m-%d"),
+        "no new round in 2 years": last_round < TODAY - pd.Timedelta(days=730),
+        "sale talks": s.get("sale_talks", pd.Series(False, index=s.index)).eq(True),
+    }
+    return pd.Series(["; ".join(k for k, m in flags.items() if m[i]) for i in s.index], index=s.index)
+
+
+def robustness(s, weights, runs=2000, seed=0):
+    """Share of runs, with each weight scaled by a random factor in [0.5, 1.5], in which
+    each company lands in the top 25 and the top 50."""
+    names = list(weights)
+    x = s[names].fillna(0.5).to_numpy()
+    base = np.array([weights[k] for k in names])
+    rng = np.random.default_rng(seed)
+    top25, top50 = np.zeros(len(s)), np.zeros(len(s))
+    for _ in range(runs):
+        w = base * rng.uniform(0.5, 1.5, len(base))
+        order = np.argsort(-(x @ w))
+        top25[order[:25]] += 1
+        top50[order[:50]] += 1
+    return top25 / runs, top50 / runs
+
+
 def pct(series):
     """Percentile rank among scored companies; blanks are neutral (0.5)."""
     return series.rank(pct=True).fillna(0.5)
@@ -110,6 +143,11 @@ EMPLOYEE_MIDPOINT = {"101-250": 175, "251-500": 375, "501-1000": 750, "1001-5000
 REPORTED_REVENUE = {"ARR", "annual revenue", "run-rate", "revenue"}
 # Brute-force research (job3_liquidity.csv) facts that end the private-company bet.
 EXIT_SIGNAL = r"^ACQUIRED by|^Definitive agreement.*to acquire|^MERGED with|Chapter 11"
+SALE_TALKS = r"M&A talks|sale talks|exploring a sale|in talks to be acquired|hired a banker"
+# Score weights with research inputs. Robustness checks vary each weight by +/-50%.
+WEIGHTS = {"web": 0.15, "hiring": 0.10, "trend": 0.05, "pace": 0.10, "step": 0.10,
+           "room": 0.25, "liquidity": 0.15, "revenue": 0.05, "investors": 0.05}
+AI_INDUSTRIES = r"Artificial Intelligence|Machine Learning|Generative AI|Agentic AI|Foundational AI"
 
 
 def load_research(job1_path, job2_path, job3_path):
@@ -150,6 +188,7 @@ def load_research(job1_path, job2_path, job3_path):
          ipo.str.contains(r"\bSPAC\b")],
         ["acquired, merged or bankrupt", "now public", "going public via SPAC"], "")
     out["exit_reason"] = pd.Series(exit_reason, index=j3.index)
+    out["sale_talks"] = j3["acquisition_signal"].fillna("").str.contains(SALE_TALKS, case=False)
     return out
 
 
@@ -245,17 +284,29 @@ def main(companies_path, rounds_path, top40_path, out_path, job1=None, job2=None
                                  pct(growth).where(growth.notna())], axis=1).mean(axis=1).fillna(0.5)
         s["revenue_multiple"] = s["valuation"] / s["revenue_usd"]
         s["revenue"] = pct(-s["revenue_multiple"])  # cheaper per dollar of revenue is better
-        s["final_score"] = (0.15 * s["web"] + 0.10 * s["hiring"] + 0.05 * s["trend"] + 0.10 * s["pace"]
-                            + 0.10 * s["step"] + 0.25 * s["room"] + 0.15 * s["liquidity"]
-                            + 0.05 * s["revenue"] + 0.05 * s["investors"])
+        s["final_score"] = sum(w * s[k] for k, w in WEIGHTS.items())
     s["price_band"] = s["valuation"].map(price_band)
+    s["sector"] = s["Industries"].fillna("").str.contains(AI_INDUSTRIES).map({True: "AI", False: "non-AI"})
 
+    # Remove fragility rather than trust small score differences: flag exposures that
+    # cut off the upside or add downside, then group the rest into tiers by how stable
+    # their position is when the weights change.
+    s["fragility"] = fragility_flags(s, hand)
     s = s.sort_values("final_score", ascending=False)
     s.insert(0, "rank", range(1, len(s) + 1))
+    s["top25_share"] = s["top50_share"] = np.nan
+    if not research.empty:
+        pool = s["fragility"] == ""
+        top25, top50 = robustness(s[pool], WEIGHTS)
+        s.loc[pool, "top25_share"], s.loc[pool, "top50_share"] = top25, top50
+    s["tier"] = np.select(
+        [s["fragility"] != "", s["top25_share"] >= 0.8, s["top50_share"] >= 0.5],
+        ["F - fragile", "A - core pool", "B - wider pool"], "C - rest")
     s["agent_top40_rank"] = s["Organization Name"].map(hand["rank"])
     for col in ["red_flags", "5x_check", "why_it_could_be_very_large"]:
         s[col] = s["Organization Name"].map(hand[col])
-    cols = ["rank", "Organization Name", "Organization Name URL", "price_band", "final_score",
+    cols = ["tier", "rank", "Organization Name", "Organization Name URL", "fragility", "top25_share",
+            "top50_share", "sector", "price_band", "final_score",
             "valuation", "valuation_source", "valuation_estimated", "step_up", "check_valuation", "Last Funding Type",
             "Last Funding Date", "Number of Employees", "Estimated Revenue Range",
             "Monthly Visits Growth", "Trend Score (90 Days)", "web", "trend", "pace", "step",
@@ -265,6 +316,7 @@ def main(companies_path, rounds_path, top40_path, out_path, job1=None, job2=None
         cols[cols.index("investors") + 1:cols.index("investors") + 1] = [
             "hiring", "revenue", "open_roles", "target_roles", "hiring_growth", "revenue_usd",
             "revenue_multiple", "tender", "ipo_filed"]
+    s = s.sort_values(["tier", "rank"])
     s[cols].to_csv(out_path, index=False)
     excluded = c[c["excluded"] != ""][["Organization Name", "excluded", "valuation"]]
     excluded.to_csv(out_path.replace(".csv", "_excluded.csv"), index=False)
