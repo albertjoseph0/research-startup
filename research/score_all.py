@@ -53,6 +53,15 @@ def prior_valuation(text):
     return parse_money(text)
 
 
+def previous_round_valuation(rounds):
+    """Valuation of the latest earlier round with a different round type, so that
+    tranches of the same round are not mistaken for a step-up."""
+    latest = rounds.iloc[-1]
+    earlier = rounds.iloc[:-1]
+    earlier = earlier[earlier["Funding Type"] != latest["Funding Type"]]
+    return earlier["Post-Money Valuation (in USD)"].iloc[-1] if len(earlier) else None
+
+
 def pct(series):
     """Percentile rank among scored companies; blanks are neutral (0.5)."""
     return series.rank(pct=True).fillna(0.5)
@@ -91,10 +100,15 @@ def main(companies_path, rounds_path, top40_path, out_path):
     t["name"] = t["company"].str.split(" - ").str[0]
 
     # Latest valuation: hand-checked top-40 value first, then the rounds export.
-    r = r.sort_values("Announced Date")
+    r = r.dropna(subset=["Post-Money Valuation (in USD)"]).sort_values("Announced Date")
+    if "Valuation Source" not in r:
+        r["Valuation Source"] = None
     last_round = r.groupby("Organization Name").last()
     c["valuation"] = c["Organization Name"].map(last_round["Post-Money Valuation (in USD)"])
     c["valuation_source"] = c["valuation"].notna().map({True: "rounds export", False: ""})
+    c["valuation_estimated"] = c["Organization Name"].map(
+        last_round["Valuation Source"].eq("c200_estimated"))
+    round_prev = r.groupby("Organization Name").apply(previous_round_valuation)
     hand = t.set_index("name")
     # The fact-check pass marks figures it could not confirm; treat those as unknown.
     hand_val = hand["latest_valuation"].map(parse_money).mask(
@@ -103,7 +117,9 @@ def main(companies_path, rounds_path, top40_path, out_path):
     in_hand = c["Organization Name"].isin(hand_val.dropna().index)
     c.loc[in_hand, "valuation"] = c.loc[in_hand, "Organization Name"].map(hand_val)
     c.loc[in_hand, "valuation_source"] = "top-40 profile check"
-    c["step_up"] = c["valuation"] / c["Organization Name"].map(hand_prev)
+    c.loc[in_hand, "valuation_estimated"] = False
+    prev = c["Organization Name"].map(hand_prev).fillna(c["Organization Name"].map(round_prev))
+    c["step_up"] = c["valuation"] / prev
 
     c["total_funding"] = num(c["Total Funding Amount (in USD)"])
 
@@ -126,6 +142,9 @@ def main(companies_path, rounds_path, top40_path, out_path):
     s["pace"] = pct(num(s["Number of Funding Rounds"]) / years.clip(lower=1))
     s["step"] = pct(s["step_up"])
     s["room"] = s["valuation"].map(room_to_grow)
+    # A Crunchbase model estimate is weaker evidence than a reported round: halve its pull.
+    estimated = s["valuation_estimated"].eq(True)
+    s.loc[estimated, "room"] = (s.loc[estimated, "room"] + 0.5) / 2
     big_revenue = s["Estimated Revenue Range"].isin(["$100M to $500M", "$500M to $1B", "$1B to $10B"])
     s["liquidity"] = (0.5 + 0.2 * big_revenue).clip(upper=1.0)  # IPO tier not exported: neutral 0.5
     investors = s["Top 5 Investors"].fillna("") + ", " + s["Lead Investors"].fillna("")
@@ -143,7 +162,7 @@ def main(companies_path, rounds_path, top40_path, out_path):
     for col in ["red_flags", "5x_check", "why_it_could_be_very_large"]:
         s[col] = s["Organization Name"].map(hand[col])
     cols = ["rank", "Organization Name", "Organization Name URL", "price_band", "final_score",
-            "valuation", "valuation_source", "step_up", "check_valuation", "Last Funding Type",
+            "valuation", "valuation_source", "valuation_estimated", "step_up", "check_valuation", "Last Funding Type",
             "Last Funding Date", "Number of Employees", "Estimated Revenue Range",
             "Monthly Visits Growth", "Trend Score (90 Days)", "web", "trend", "pace", "step",
             "room", "liquidity", "investors", "agent_top40_rank", "red_flags", "5x_check", "why_it_could_be_very_large", "Industries",
