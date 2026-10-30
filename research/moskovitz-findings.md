@@ -97,10 +97,77 @@ Jay Ritter's IPO data (median company age at IPO, and venture-backed IPOs per ye
   Series A, 22–27% at Series B, 16% at Series C. That is the whole team; split across
   2–3 founders, each holds roughly 5–8% by Series C.
 
+## Tail shape from published, realised outcomes
+
+Venture outcomes measured at exit (cash), not at the latest private valuation:
+
+| Source | Sample | <1× | 1–2× | 2–5× | 5–10× | 10–50× | 50×+ |
+|---|---|---|---|---|---|---|---|
+| Correlation Ventures | 27,259 US financings, 2009–18 | 65% | 18% | 8% | 5% | 3.6% | 0.4% |
+
+- Horsley Bridge (about 7,000 investments, 1985–2014): about half lost money; 6% returned
+  10× or more and produced 60% of all returns.
+- Correlation Ventures (2004–13, 21,000+ financings): 10% returned 5×+, 4% returned 10×+.
+- Tail slope α (survival convention, P(≥x) ∝ x^−α): 1.17 between 5× and 10×, 1.43 between
+  10× and 50× (Correlation 2009–18); 1.32 between 5× and 10× (2004–13). AngelList (1,808
+  early investments, Clauset method) reports α = 2.3 in the density convention, which is
+  about 1.3 in the survival convention. So realised venture outcomes have α ≈ 1.2–1.4:
+  the average exists, but the spread is enormous.
+- **The tail grows fatter the longer investments are held.** AngelList data summarised by
+  McDonald (secondary source): α ≈ 4.0 after 1 year, 2.0 after 2, 1.3 after 3, 1.1 after 4,
+  1.0 after 5, 0.8 after 8 years.
+
+**Correction to the earlier estimate:** our 2015–19 cohort data gave α ≈ 0.65 (Series A)
+and ≈ 1.0 (Series B). Those used paper values (latest private rounds, including 2021-peak
+prices), which make the tail look fatter than realised outcomes. The extrapolated
+table below therefore overstates Series A and B odds.
+
+**Regime dependence is strong.** Venture fund median TVPI is 2.15× for 2014–17 vintages
+and 1.30× for 2018–21 (Dakota). Against the S&P 500 (KS PME) it is 1.12 for 2014–17 and
+0.84 for 2018–21 (Cambridge Associates via Lambda). Cash actually returned (DPI) by
+2017 and 2018 funds is only 0.31× and 0.15× of capital after 8–9 years. Recent vintages
+are weaker and slower to pay out than the 2015–19 companies we measured.
+
+### What this means for one employee try
+
+Anchored on realised data (4% of financings reach 10×, 0.4% reach 50×, α ≈ 1.3–1.45),
+for a $150K grant (four years, valued at the investor price):
+
+| Outcome | Multiple | Value | Chance per try | At least once in 3 independent tries |
+|---|---|---|---|---|
+| Good | 10× | $1.5M | ~4% | ~11.5% |
+| Very good | 20× | $3M | ~1.5% | ~4.4% |
+| Moskovitz's example | 50–100× | $7.5–15M | ~0.15–0.4% | ~0.5–1.2% |
+
+These are venture-wide, mostly early-stage odds. Later-stage entry is likely lower (in
+our 2015–19 data, a 5× cashed exit within 4 years happened for ~1% of Series C
+companies). Correlated tries lower the three-try figures further.
+
+### Founder outcomes (for comparison)
+
+- 84–88% of venture-backed founders receive nothing at exit; the top 2% capture about
+  80–89% of all founder exit value (NBER working paper 34512; Dealroom summary,
+  1987–2025).
+- The average founder payoff is $5.6M, but the top percentile is $661M. The average is
+  produced by the tail; the typical founder gets $0.
+- Common stock can get nothing at mid-sized exits because investors are paid first:
+  FanDuel sold for $465M against $559M of investor preferences, and common received $0.
+  This happens mainly in $50–500M exits.
+
+### Employee option behaviour
+
+- 85% of option grants have a 90-day window to buy after leaving (Carta, 2022).
+- 46% of in-the-money options expiring in 2022 went unexercised. Only 28% were exercised
+  during the post-leaving window. 23% of employees who didn't exercise said they
+  couldn't afford it.
+- Tender offers: the median allows selling 20% of eligible shares, at no discount
+  (median), and is fully subscribed at Series C+. Median tender size is $27.6M at
+  Series C+ and $5M at Series B and earlier.
+
 ## Q1 and Q5. Tail shape by price and which signals matter: open (Nov 1)
 
-Rough extrapolation from the 2015–19 tail slopes (paper value), to be replaced by the
-Nov 1 queries:
+Rough extrapolation from the 2015–19 tail slopes (paper value). **This overstates
+Series A and B odds (see above).** To be replaced by the Nov 1 queries:
 
 | Joined at | P(≥10×) | P(≥20×) | P(≥33×) | P(≥50×) | P(≥100×) |
 |---|---|---|---|---|---|
@@ -121,6 +188,12 @@ Nov 1 queries:
   is 5–10× larger and the tail is fatter but cash is slower.
 - **His speed claim weakens.** Fewer IPOs and later IPOs mean tender offers matter
   more, and options with 90-day exercise windows make leaving after two years costly.
-- **The founder path is about as hard as he said:** 1.3% unicorn rate, 62% shut down.
-  A founder's share at success is still roughly 5–8% each, far larger than an
-  employee's 1–10 bp.
+- **The founder path is about as hard as he said:** 1.3% unicorn rate, 62% shut down,
+  and 84–88% of founders get nothing at exit. A founder's share at success is still
+  roughly 5–8% each, far larger than an employee's 1–10 bp.
+- **Fat tails change how to do several tries.** Big outcomes come from holding winners
+  for years (the tail fattens with holding time), not from cashing out every two years.
+  The strategy that fits the data is to leave losers quickly and keep the shares of
+  winners. Keeping them means buying vested options when you leave, so you need either
+  cash set aside for that or a company with a long exercise window. Only Hightouch has
+  a documented one in the top 25.

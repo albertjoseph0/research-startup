@@ -44,6 +44,12 @@ A smaller α means a fatter tail.
 Read with care: α comes from 2–3 points per stage; paper values include 2021-peak
 valuations; companies still private are measured at their latest round.
 
+**Update (published data, see moskovitz-findings.md):** realised venture outcomes have
+α ≈ 1.2–1.4 (Correlation Ventures, AngelList), so the paper-based Series A and B slopes
+above are too fat. Query 1 now asks for realised (cash) counts at 4 and 8 years
+separately, because the tail fattens with holding time. It also asks how many sales
+came in below total funding raised, where employee stock can be wiped out.
+
 Cash within 4 years (realised exits only) runs the other way: ≥5× in cash was ~1% for
 Series A–C and 5–6% for D–E. So joining earlier gives a fatter tail on paper but a
 slower path to cash. The decision is a trade-off between tail fatness and the number
@@ -54,7 +60,7 @@ of tries per decade.
 Each query asks for counts at several thresholds, not medians.
 
 **Query 1 – tail by entry price and maturity (~80k).**
-> For United States-headquartered companies, take each company's first funding round of each type Series A, B, C, D and E announced between 2015-01-01 and 2019-12-31 that has a disclosed post-money valuation (a company can appear in more than one group). Group by post-money valuation band ($30M to $100M, $100M to $300M, $300M to $1B, $1B to $3B, $3B to $10B) and by stage (early = Series A or B; late = Series C, D or E). Define outcome value as the IPO valuation or acquisition price if disclosed, otherwise the latest disclosed post-money valuation if still private and operating. For each band and stage report: number of companies; number with a known outcome value; counts with outcome value at least 1, 2, 5, 10, 20, 50 and 100 times the round's post-money valuation; counts that went public or were acquired within 6 years of the round at a disclosed value at least 5, 10 and 20 times the round's post-money valuation.
+> For United States-headquartered companies, take each company's first funding round of each type Series A, B, C, D and E announced between 2015-01-01 and 2019-12-31 that has a disclosed post-money valuation (a company can appear in more than one group). Group by post-money valuation band ($30M to $100M, $100M to $300M, $300M to $1B, $1B to $3B, $3B to $10B) and by stage (early = Series A or B; late = Series C, D or E). Define outcome value as the IPO valuation or acquisition price if disclosed, otherwise the latest disclosed post-money valuation if still private and operating. For each band and stage report: number of companies; number with a known outcome value; counts with outcome value at least 1, 2, 5, 10, 20, 50 and 100 times the round's post-money valuation; counts that went public or were acquired at a disclosed value at least 2, 5, 10, 20 and 50 times the round's post-money valuation, separately within 4 years and within 8 years of the round; count that went public or were acquired at a disclosed value below the company's total funding raised before the sale.
 
 **Query 2 – which observable signals fatten the tail (~80k).**
 > Same cohort and outcome definition as before. Group the rounds by (a) the ratio of the round's post-money valuation to the company's previous disclosed post-money valuation (under 1.5x, 1.5x to 3x, over 3x, no prior valuation) and (b) whether a lead investor of the round is one of Sequoia Capital, Andreessen Horowitz, Benchmark, Accel, Founders Fund, Lightspeed Venture Partners, Index Ventures, Greylock, Kleiner Perkins, General Catalyst, Thrive Capital, Khosla Ventures. For each group report: number of companies; counts with outcome value at least 2, 5, 10 and 20 times the round's post-money valuation; counts that went public or were acquired within 6 years at a disclosed value at least 5 and 10 times the round's post-money valuation.
