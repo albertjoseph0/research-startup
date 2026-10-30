@@ -1,6 +1,6 @@
 """Score a Crunchbase company export using the rules in browser-agent-instructions.md.
 
-Usage: python3 score_companies.py COMPANIES.csv ROUNDS.csv[,ROUNDS2.csv...] PROFILE_CHECKS.csv OUT.csv
+Usage: python3 score_all.py COMPANIES.csv ROUNDS.csv[,ROUNDS2.csv...] PROFILE_CHECKS.csv OUT.csv
 """
 import re
 import sys

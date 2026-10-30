@@ -158,5 +158,5 @@ The report should list:
 The user's analyst will then re-run the scoring with:
 
 ```bash
-python3 research/score_companies.py companies.csv old-rounds.csv,new-rounds.csv profile_checks.csv scored.csv
+python3 research/score_all.py companies.csv old-rounds.csv,new-rounds.csv profile_checks.csv scored.csv
 ```
