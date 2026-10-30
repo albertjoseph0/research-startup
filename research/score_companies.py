@@ -1,165 +1,125 @@
-"""Apply the hard gates and scoring from browser-agent-instructions.md to Crunchbase exports.
+"""Score a Crunchbase company export using the rules in browser-agent-instructions.md.
 
-Usage: python3 -I score_companies.py companies.csv rounds.csv out_dir
-
-Deviations from the instructions, forced by what the exports contain:
-- Actively Hiring is almost always blank, and the rounds export only covers recent rounds,
-  so the hiring and valuation step-up signals are dropped and their weight redistributed.
-- IPO Prediction Tier cannot be exported, so the liquidity signal uses revenue alone.
-- Without a known valuation, total funding >= $2B is treated as "likely valued above $10B".
+Usage: python3 score_companies.py COMPANIES.csv ROUNDS.csv TOP40.csv OUT.csv
 """
-import csv
+import re
 import sys
-from datetime import date
-from pathlib import Path
 
-TODAY = date(2026, 10, 29)
+import pandas as pd
+
+TOP_INVESTORS = [
+    "Sequoia Capital", "Andreessen Horowitz", "Benchmark", "Accel", "Founders Fund",
+    "Lightspeed Venture Partners", "Index Ventures", "Greylock", "Kleiner Perkins",
+    "General Catalyst", "Thrive Capital", "Coatue", "ICONIQ", "Insight Partners",
+    "Khosla Ventures", "Redpoint", "Bessemer Venture Partners", "IVP", "Tiger Global",
+    "Y Combinator",
+]
 LAYOFF_CUTOFF = "2025-11-01"
 MAX_VALUATION = 10e9
-LIKELY_OVER_MAX_TOTAL_FUNDING = 2e9
-MIN_VISITS_FOR_GROWTH = 10_000
-TIER = {"Series D": 1.0, "Series E": 1.0, "Series F": 1.0, "Series C": 0.85}
-WEIGHTS = {
-    "web_momentum": 0.25,
-    "trend": 0.15,
-    "funding_pace": 0.20,
-    "room_to_grow": 0.15,
-    "revenue": 0.15,
-    "investors": 0.10,
+TODAY = pd.Timestamp("2026-10-30")
+# Valuations missing from the exports but widely reported above the $10B gate.
+KNOWN_OVER_10B = {
+    "Anysphere (Cursor)": "valuation over $10B ($29.3B, Nov 2025 reporting)",
+    "Applied Intuition": "valuation over $10B ($15B, Jun 2025 reporting)",
 }
-REVENUE_SCORE = {
-    "$1B to $10B": 1.0, "$10B+": 1.0, "$500M to $1B": 1.0, "$100M to $500M": 1.0,
-    "$50M to $100M": 0.6, "$10M to $50M": 0.3, "$1M to $10M": 0.1, "Less than $1M": 0.0,
-}
-TOP_INVESTORS = [
-    "sequoia capital", "andreessen horowitz", "benchmark", "accel", "founders fund",
-    "lightspeed venture partners", "index ventures", "greylock", "kleiner perkins",
-    "general catalyst", "thrive capital", "coatue", "iconiq", "insight partners",
-    "khosla ventures", "redpoint", "bessemer venture partners", "ivp", "tiger global",
-    "y combinator",
-]
 
 
-def num(s):
-    s = (s or "").replace(",", "").replace("%", "").strip()
-    return float(s) if s else None
+def num(series):
+    return pd.to_numeric(series.astype(str).str.replace(r"[,%$]", "", regex=True), errors="coerce")
 
 
-def percentiles(values):
-    """Percentile rank (0-1) of each value among the non-blank ones; blanks become 0.5."""
-    known = sorted(v for v in values if v is not None)
-    if len(known) < 2:
-        return [0.5] * len(values)
-    out = []
-    for v in values:
-        if v is None:
-            out.append(0.5)
-        else:
-            below = sum(1 for k in known if k < v)
-            equal = sum(1 for k in known if k == v)
-            out.append((below + (equal - 1) / 2) / (len(known) - 1))
-    return out
+def parse_money(text):
+    """'$2.2B' / '$650M' / 'Over $2B' -> float USD; None if no figure."""
+    m = re.search(r"\$([\d.]+)\s*([BM])", str(text))
+    if not m:
+        return None
+    return float(m.group(1)) * (1e9 if m.group(2) == "B" else 1e6)
 
 
-def latest_valuations(rounds):
-    latest = {}
-    for r in rounds:
-        val = num(r["Post-Money Valuation (in USD)"])
-        key = r["Organization Name URL"]
-        if val and (key not in latest or r["Announced Date"] > latest[key][1]):
-            latest[key] = (val, r["Announced Date"], r["Funding Type"])
-    return latest
+def pct(series):
+    """Percentile rank among scored companies; blanks are neutral (0.5)."""
+    return series.rank(pct=True).fillna(0.5)
 
 
-def room_to_grow(valuation):
-    if valuation is None:
+def room_to_grow(v):
+    if pd.isna(v):
         return 0.5
-    if valuation < 300e6:
+    if v < 300e6:
         return 0.6
-    if valuation <= 3e9:
+    if v <= 3e9:
         return 1.0
     return 0.5
 
 
-def main(companies_path, rounds_path, out_dir):
-    companies = list(csv.DictReader(open(companies_path, encoding="utf-8-sig")))
-    valuations = latest_valuations(csv.DictReader(open(rounds_path, encoding="utf-8-sig")))
+def main(companies_path, rounds_path, top40_path, out_path):
+    c = pd.read_csv(companies_path)
+    r = pd.read_csv(rounds_path)
+    t = pd.read_csv(top40_path)
+    t["name"] = t["company"].str.split(" - ").str[0]
 
-    for c in companies:
-        val = valuations.get(c["Organization Name URL"])
-        c["valuation"], c["valuation_date"] = (val[0], val[1]) if val else (None, "")
-        total = num(c["Total Funding Amount (in USD)"])
-        reasons = []
-        if c["Last Layoff Mention Date"] >= LAYOFF_CUTOFF:
-            reasons.append(f"layoff {c['Last Layoff Mention Date']}")
-        if c["valuation"] and c["valuation"] > MAX_VALUATION:
-            reasons.append(f"valuation ${c['valuation'] / 1e9:.1f}B > $10B")
-        elif c["valuation"] is None and total and total >= LIKELY_OVER_MAX_TOTAL_FUNDING:
-            reasons.append(f"raised ${total / 1e9:.1f}B, likely valued > $10B (verify)")
-        c["excluded"] = "; ".join(reasons)
+    # Latest valuation: hand-checked top-40 value first, then the rounds export.
+    r = r.sort_values("Announced Date")
+    last_round = r.groupby("Organization Name").last()
+    c["valuation"] = c["Organization Name"].map(last_round["Post-Money Valuation (in USD)"])
+    c["valuation_source"] = c["valuation"].notna().map({True: "rounds export", False: ""})
+    hand = t.set_index("name")
+    # The fact-check pass marks figures it could not confirm; treat those as unknown.
+    unverified = r"UNVERIFIABLE|NOT a separate"
+    hand_val = hand["latest_valuation"].map(parse_money).mask(
+        hand["latest_valuation"].str.contains(unverified, na=False))
+    hand_prev = hand["previous_valuation"].map(parse_money).mask(
+        hand["previous_valuation"].str.contains(unverified, na=False))
+    in_hand = c["Organization Name"].isin(hand_val.dropna().index)
+    c.loc[in_hand, "valuation"] = c.loc[in_hand, "Organization Name"].map(hand_val)
+    c.loc[in_hand, "valuation_source"] = "top-40 profile check"
+    c["step_up"] = c["valuation"] / c["Organization Name"].map(hand_prev)
 
-    kept = [c for c in companies if not c["excluded"]]
+    c["total_funding"] = num(c["Total Funding Amount (in USD)"])
 
-    growth, ratio = [], []
-    for c in kept:
-        visits = num(c["Monthly Visits"])
-        avg6 = num(c["Average Visits (6 months)"])
-        enough = visits is not None and visits >= MIN_VISITS_FOR_GROWTH
-        growth.append(num(c["Monthly Visits Growth"]) if enough else None)
-        ratio.append(visits / avg6 if enough and avg6 else None)
-    web = [(a + b) / 2 for a, b in zip(percentiles(growth), percentiles(ratio))]
+    # Hard gates.
+    c["excluded"] = ""
+    c.loc[c["Last Layoff Mention Date"].fillna("") >= LAYOFF_CUTOFF, "excluded"] = "layoff since " + LAYOFF_CUTOFF
+    c.loc[(c["excluded"] == "") & (c["valuation"] > MAX_VALUATION), "excluded"] = "valuation over $10B"
+    for name, reason in KNOWN_OVER_10B.items():
+        c.loc[(c["excluded"] == "") & (c["Organization Name"] == name), "excluded"] = reason
+    c["check_valuation"] = c["valuation"].isna() & (c["total_funding"] > 1.5e9)
 
-    trend = percentiles([num(c["Trend Score (90 Days)"]) for c in kept])
+    s = c[c["excluded"] == ""].copy()
+    visits, avg6 = num(s["Monthly Visits"]), num(s["Average Visits (6 months)"])
+    s["web"] = (pct(num(s["Monthly Visits Growth"])) + pct(visits / avg6)) / 2
+    s["trend"] = pct(num(s["Trend Score (90 Days)"]))
+    years = (TODAY - pd.to_datetime(s["Founded Date"], errors="coerce")).dt.days / 365.25
+    s["pace"] = pct(num(s["Number of Funding Rounds"]) / years.clip(lower=1))
+    s["step"] = pct(s["step_up"])
+    s["room"] = s["valuation"].map(room_to_grow)
+    big_revenue = s["Estimated Revenue Range"].isin(["$100M to $500M", "$500M to $1B", "$1B to $10B"])
+    s["liquidity"] = (0.5 + 0.2 * big_revenue).clip(upper=1.0)  # IPO tier not exported: neutral 0.5
+    investors = s["Top 5 Investors"].fillna("") + ", " + s["Lead Investors"].fillna("")
+    s["investors"] = investors.map(lambda x: float(any(i in x for i in TOP_INVESTORS)))
 
-    pace_raw = []
-    for c in kept:
-        founded = date.fromisoformat(c["Founded Date"]) if c["Founded Date"] else None
-        rounds = num(c["Number of Funding Rounds"])
-        years = max((TODAY - founded).days / 365.25, 1.0) if founded else None
-        pace_raw.append(rounds / years if rounds and years else None)
-    pace = percentiles(pace_raw)
+    s["score"] = (0.20 * s["web"] + 0.10 * s["trend"] + 0.15 * s["pace"] + 0.10 * s["step"]
+                  + 0.15 * s["room"] + 0.10 * s["liquidity"] + 0.10 * s["investors"]
+                  ) / 0.90  # hiring (10%) dropped: under 1% of rows have it
+    tier1 = s["Last Funding Type"].isin(["Series D", "Series E", "Series F"])
+    s["tier"] = tier1.map({True: 1, False: 2})
+    s["final_score"] = s["score"] * tier1.map({True: 1.0, False: 0.85})
 
-    for i, c in enumerate(kept):
-        investors = f"{c['Top 5 Investors']}, {c['Lead Investors']}".lower()
-        signals = {
-            "web_momentum": web[i],
-            "trend": trend[i],
-            "funding_pace": pace[i],
-            "room_to_grow": room_to_grow(c["valuation"]),
-            "revenue": REVENUE_SCORE.get(c["Estimated Revenue Range"], 0.5),
-            "investors": 1.0 if any(n in investors for n in TOP_INVESTORS) else 0.0,
-        }
-        c.update({k: round(v, 3) for k, v in signals.items()})
-        c["tier"] = 1 if TIER[c["Last Funding Type"]] == 1.0 else 2
-        c["final_score"] = round(
-            sum(WEIGHTS[k] * v for k, v in signals.items()) * TIER[c["Last Funding Type"]], 4
-        )
-
-    kept.sort(key=lambda c: c["final_score"], reverse=True)
-    for rank, c in enumerate(kept, 1):
-        c["rank"] = rank
-
-    cols = [
-        "rank", "Organization Name", "Organization Name URL", "tier", "final_score",
-        "Last Funding Type", "Last Funding Date", "valuation", "valuation_date",
-        "Total Funding Amount (in USD)", "Estimated Revenue Range", "Number of Employees",
-        "Headquarters Location", "Industries", *WEIGHTS, "Top 5 Investors", "Description",
-    ]
-    out = Path(out_dir)
-    out.mkdir(parents=True, exist_ok=True)
-    with open(out / "scored.csv", "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
-        w.writeheader()
-        w.writerows(kept)
-    with open(out / "excluded.csv", "w", newline="") as f:
-        w = csv.DictWriter(
-            f, fieldnames=["Organization Name", "Organization Name URL", "excluded"],
-            extrasaction="ignore",
-        )
-        w.writeheader()
-        w.writerows(c for c in companies if c["excluded"])
-    print(f"{len(companies)} companies, {len(companies) - len(kept)} excluded, {len(kept)} scored")
+    s = s.sort_values("final_score", ascending=False)
+    s.insert(0, "rank", range(1, len(s) + 1))
+    s["agent_top40_rank"] = s["Organization Name"].map(hand["rank"])
+    for col in ["red_flags", "5x_check", "why_it_could_be_very_large"]:
+        s[col] = s["Organization Name"].map(hand[col])
+    cols = ["rank", "Organization Name", "Organization Name URL", "tier", "final_score",
+            "valuation", "valuation_source", "step_up", "check_valuation", "Last Funding Type",
+            "Last Funding Date", "Number of Employees", "Estimated Revenue Range",
+            "Monthly Visits Growth", "Trend Score (90 Days)", "web", "trend", "pace", "step",
+            "room", "liquidity", "investors", "agent_top40_rank", "red_flags", "5x_check", "why_it_could_be_very_large", "Industries",
+            "Description"]
+    s[cols].to_csv(out_path, index=False)
+    excluded = c[c["excluded"] != ""][["Organization Name", "excluded", "valuation"]]
+    excluded.to_csv(out_path.replace(".csv", "_excluded.csv"), index=False)
+    print(f"scored {len(s)}, excluded {len(excluded)}")
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:4])
+    main(*sys.argv[1:5])
