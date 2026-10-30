@@ -1,6 +1,10 @@
 """Score a Crunchbase company export using the rules in browser-agent-instructions.md.
 
 Usage: python3 score_all.py COMPANIES.csv ROUNDS.csv[,ROUNDS2.csv...] PROFILE_CHECKS.csv OUT.csv
+                            [JOB1_HIRING.csv JOB2_REVENUE.csv JOB3_LIQUIDITY.csv]
+
+The optional job files (browser-agent-brute-force.md) add hiring, revenue-multiple and
+early-cash signals and exclude companies the research found acquired or going public.
 """
 import re
 import sys
@@ -93,8 +97,58 @@ def price_band(v):
     return "$3B-$10B"
 
 
-def main(companies_path, rounds_path, top40_path, out_path):
+EMPLOYEE_MIDPOINT = {"101-250": 175, "251-500": 375, "501-1000": 750, "1001-5000": 3000}
+REPORTED_REVENUE = {"ARR", "annual revenue", "run-rate", "revenue"}
+# Brute-force research (job3_liquidity.csv) facts that end the private-company bet.
+EXIT_SIGNAL = r"^ACQUIRED by|^Definitive agreement.*to acquire|^MERGED with|Chapter 11"
+
+
+def load_research(job1_path, job2_path, job3_path):
+    """Per-company research signals keyed by Crunchbase URL."""
+    frames = [pd.read_csv(p) for p in (job1_path, job2_path, job3_path)]
+    # Some job rows lost their URL; recover it from another job's row for the same company.
+    urls = pd.concat(frames).dropna(subset=["crunchbase_url"]).drop_duplicates("company")
+    urls = urls.set_index("company")["crunchbase_url"]
+
+    def keyed(df):
+        df = df.assign(crunchbase_url=df["crunchbase_url"].fillna(df["company"].map(urls)))
+        # Rows found outside the Crunchbase universe (Job 7) still have no URL and are skipped.
+        return df.dropna(subset=["crunchbase_url"]).drop_duplicates("crunchbase_url").set_index("crunchbase_url")
+    j1, j2, j3 = (keyed(df) for df in frames)
+    out = pd.DataFrame(index=j1.index.union(j2.index).union(j3.index))
+
+    out["open_roles"] = pd.to_numeric(j1["open_roles_now"], errors="coerce")
+    out["target_roles"] = pd.to_numeric(j1["open_roles_target_role_now"], errors="coerce")
+    past = pd.to_numeric(j1["open_roles_12mo_ago"], errors="coerce").fillna(
+        pd.to_numeric(j1["open_roles_6mo_ago"], errors="coerce"))
+    out["hiring_growth"] = (out["open_roles"] + 1) / (past + 1)
+
+    revenue = pd.to_numeric(j2["revenue_usd"], errors="coerce")
+    out["revenue_usd"] = revenue.where(j2["revenue_type"].isin(REPORTED_REVENUE))
+
+    details = j3["tender_offer_details"].fillna("")
+    has_tender = ~j3["tender_offer_date"].fillna("None found").str.startswith("None found")
+    investors_only = details.str.contains("not employee", case=False)
+    unclear = details.str.contains("not stated|unverified", case=False)
+    out["tender"] = pd.Series(np.select(
+        [has_tender & ~investors_only & ~unclear, has_tender & ~investors_only & unclear],
+        ["employee tender", "tender, eligibility unclear"], ""), index=j3.index)
+    ipo = j3["ipo_signal"].fillna("")
+    out["ipo_filed"] = ipo.str.contains("filed an S-1", case=False)
+    exit_reason = np.select(
+        [j3["acquisition_signal"].fillna("").str.contains(EXIT_SIGNAL, case=False),
+         ipo.str.contains("IPO priced", case=False),
+         ipo.str.contains(r"\bSPAC\b")],
+        ["acquired, merged or bankrupt", "now public", "going public via SPAC"], "")
+    out["exit_reason"] = pd.Series(exit_reason, index=j3.index)
+    return out
+
+
+def main(companies_path, rounds_path, top40_path, out_path, job1=None, job2=None, job3=None):
     c = pd.read_csv(companies_path)
+    research = load_research(job1, job2, job3) if job1 else pd.DataFrame()
+    for col in research:
+        c[col] = c["Organization Name URL"].map(research[col])
     r = pd.concat([pd.read_csv(p) for p in rounds_path.split(",")]).drop_duplicates("Transaction Name URL")
     t = pd.read_csv(top40_path)
     t["name"] = t["company"].str.split(" - ").str[0]
@@ -139,6 +193,9 @@ def main(companies_path, rounds_path, top40_path, out_path):
         c.loc[(c["excluded"] == "") & (c["Organization Name"] == name), "excluded"] = "acquired or bankrupt"
     for name, reason in KNOWN_OVER_10B.items():
         c.loc[(c["excluded"] == "") & (c["Organization Name"] == name), "excluded"] = reason
+    if "exit_reason" in c:
+        research_exit = (c["excluded"] == "") & c["exit_reason"].fillna("").ne("")
+        c.loc[research_exit, "excluded"] = c.loc[research_exit, "exit_reason"]
     c["check_valuation"] = c["valuation"].isna() & (c["total_funding"] > 1.5e9)
 
     s = c[c["excluded"] == ""].copy()
@@ -157,10 +214,25 @@ def main(companies_path, rounds_path, top40_path, out_path):
     investors = s["Top 5 Investors"].fillna("") + ", " + s["Lead Investors"].fillna("")
     s["investors"] = investors.map(lambda x: float(any(i in x for i in TOP_INVESTORS)))
 
-    # Entry price, not round name, sets the preference: round valuations are 3-5x higher
-    # than in 2015-19, so "Series D/E" no longer means a ~$500M company.
-    s["final_score"] = (0.20 * s["web"] + 0.10 * s["trend"] + 0.15 * s["pace"] + 0.10 * s["step"]
-                        + 0.25 * s["room"] + 0.10 * s["liquidity"] + 0.10 * s["investors"])
+    if research.empty:
+        # Entry price, not round name, sets the preference: round valuations are 3-5x higher
+        # than in 2015-19, so "Series D/E" no longer means a ~$500M company.
+        s["final_score"] = (0.20 * s["web"] + 0.10 * s["trend"] + 0.15 * s["pace"] + 0.10 * s["step"]
+                            + 0.25 * s["room"] + 0.10 * s["liquidity"] + 0.10 * s["investors"])
+    else:
+        # Early cash: a proven employee tender or a filed S-1 is direct evidence of liquidity.
+        tender = s["tender"].fillna("")
+        s.loc[tender.eq("tender, eligibility unclear"), "liquidity"] = s["liquidity"].clip(lower=0.8)
+        s.loc[tender.eq("employee tender") | s["ipo_filed"].eq(True), "liquidity"] = 1.0
+        intensity = s["open_roles"] / s["Number of Employees"].map(EMPLOYEE_MIDPOINT)
+        growth = s["hiring_growth"].clip(upper=10)
+        s["hiring"] = pd.concat([pct(intensity).where(intensity.notna()),
+                                 pct(growth).where(growth.notna())], axis=1).mean(axis=1).fillna(0.5)
+        s["revenue_multiple"] = s["valuation"] / s["revenue_usd"]
+        s["revenue"] = pct(-s["revenue_multiple"])  # cheaper per dollar of revenue is better
+        s["final_score"] = (0.15 * s["web"] + 0.10 * s["hiring"] + 0.05 * s["trend"] + 0.10 * s["pace"]
+                            + 0.10 * s["step"] + 0.25 * s["room"] + 0.15 * s["liquidity"]
+                            + 0.05 * s["revenue"] + 0.05 * s["investors"])
     s["price_band"] = s["valuation"].map(price_band)
 
     s = s.sort_values("final_score", ascending=False)
@@ -174,6 +246,10 @@ def main(companies_path, rounds_path, top40_path, out_path):
             "Monthly Visits Growth", "Trend Score (90 Days)", "web", "trend", "pace", "step",
             "room", "liquidity", "investors", "agent_top40_rank", "red_flags", "5x_check", "why_it_could_be_very_large", "Industries",
             "Description"]
+    if not research.empty:
+        cols[cols.index("investors") + 1:cols.index("investors") + 1] = [
+            "hiring", "revenue", "open_roles", "target_roles", "hiring_growth", "revenue_usd",
+            "revenue_multiple", "tender", "ipo_filed"]
     s[cols].to_csv(out_path, index=False)
     excluded = c[c["excluded"] != ""][["Organization Name", "excluded", "valuation"]]
     excluded.to_csv(out_path.replace(".csv", "_excluded.csv"), index=False)
@@ -181,4 +257,4 @@ def main(companies_path, rounds_path, top40_path, out_path):
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:5])
+    main(*sys.argv[1:8])
