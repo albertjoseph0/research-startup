@@ -1,7 +1,9 @@
 """Score a Crunchbase company export using the rules in browser-agent-instructions.md.
 
-Usage: python3 score_all.py COMPANIES.csv ROUNDS.csv[,ROUNDS2.csv...] PROFILE_CHECKS.csv OUT.csv
+Usage: python3 score_all.py COMPANIES.csv ROUNDS.csv PROFILE_CHECKS.csv OUT.csv
                             [JOB1_HIRING.csv JOB2_REVENUE.csv JOB3_LIQUIDITY.csv]
+
+Any CSV argument except PROFILE_CHECKS and OUT may be several comma-separated files.
 
 The optional job files (browser-agent-brute-force.md) add hiring, revenue-multiple and
 early-cash signals and exclude companies the research found acquired or going public.
@@ -66,6 +68,11 @@ def previous_round_valuation(rounds):
     return earlier["Post-Money Valuation (in USD)"].iloc[-1] if len(earlier) else None
 
 
+def read_all(paths):
+    """Read one CSV, or several comma-separated CSVs with the same columns."""
+    return pd.concat([pd.read_csv(p) for p in paths.split(",")], ignore_index=True)
+
+
 def pct(series):
     """Percentile rank among scored companies; blanks are neutral (0.5)."""
     return series.rank(pct=True).fillna(0.5)
@@ -97,6 +104,8 @@ def price_band(v):
     return "$3B-$10B"
 
 
+# Crunchbase API codes and the labels shown on profile pages.
+ESTIMATED = {"c200_estimated": True, "Estimated": True, "c100_confirmed": False, "Confirmed": False}
 EMPLOYEE_MIDPOINT = {"101-250": 175, "251-500": 375, "501-1000": 750, "1001-5000": 3000}
 REPORTED_REVENUE = {"ARR", "annual revenue", "run-rate", "revenue"}
 # Brute-force research (job3_liquidity.csv) facts that end the private-company bet.
@@ -105,7 +114,7 @@ EXIT_SIGNAL = r"^ACQUIRED by|^Definitive agreement.*to acquire|^MERGED with|Chap
 
 def load_research(job1_path, job2_path, job3_path):
     """Per-company research signals keyed by Crunchbase URL."""
-    frames = [pd.read_csv(p) for p in (job1_path, job2_path, job3_path)]
+    frames = [read_all(p) for p in (job1_path, job2_path, job3_path)]
     # Some job rows lost their URL; recover it from another job's row for the same company.
     urls = pd.concat(frames).dropna(subset=["crunchbase_url"]).drop_duplicates("company")
     urls = urls.set_index("company")["crunchbase_url"]
@@ -145,11 +154,11 @@ def load_research(job1_path, job2_path, job3_path):
 
 
 def main(companies_path, rounds_path, top40_path, out_path, job1=None, job2=None, job3=None):
-    c = pd.read_csv(companies_path)
+    c = read_all(companies_path)
     research = load_research(job1, job2, job3) if job1 else pd.DataFrame()
     for col in research:
         c[col] = c["Organization Name URL"].map(research[col])
-    r = pd.concat([pd.read_csv(p) for p in rounds_path.split(",")]).drop_duplicates("Transaction Name URL")
+    r = read_all(rounds_path).drop_duplicates("Transaction Name URL")
     t = pd.read_csv(top40_path)
     t["name"] = t["company"].str.split(" - ").str[0]
 
@@ -162,7 +171,7 @@ def main(companies_path, rounds_path, top40_path, out_path, job1=None, job2=None
     c["valuation_source"] = c["valuation"].notna().map({True: "rounds export", False: ""})
     # Blank when the source does not say (the browser rounds export has no such field).
     c["valuation_estimated"] = c["Organization Name"].map(
-        last_round["Valuation Source"].map({"c200_estimated": True, "c100_confirmed": False}))
+        last_round["Valuation Source"].map(ESTIMATED))
     round_prev = r.groupby("Organization Name").apply(previous_round_valuation)
     hand = t.set_index("name")
     # The fact-check pass marks figures it could not confirm; treat those as unknown.
@@ -186,6 +195,12 @@ def main(companies_path, rounds_path, top40_path, out_path, job1=None, job2=None
 
     # Hard gates.
     c["excluded"] = ""
+    # The original export applied these filters; rows added from other sources may not meet them.
+    employees = c["Number of Employees"].fillna("")
+    c.loc[employees.isin(["1-10", "11-50", "51-100"]), "excluded"] = "under 101 employees"
+    c.loc[~c["Headquarters Location"].fillna("").str.endswith("United States"), "excluded"] = "not US-headquartered"
+    c.loc[c["IPO Status"].fillna("") != "Private", "excluded"] = "not private"
+    c.loc[c["Operating Status"].fillna("") != "Active", "excluded"] = "not active"
     c.loc[c["Last Layoff Mention Date"].fillna("") >= LAYOFF_CUTOFF, "excluded"] = "layoff since " + LAYOFF_CUTOFF
     c.loc[(c["excluded"] == "") & (c["valuation"] > MAX_VALUATION), "excluded"] = "valuation over $10B"
     ended = hand["red_flags"].str.contains(ENDED, case=False, na=False)
@@ -202,7 +217,7 @@ def main(companies_path, rounds_path, top40_path, out_path, job1=None, job2=None
     visits, avg6 = num(s["Monthly Visits"]), num(s["Average Visits (6 months)"])
     s["web"] = (pct(num(s["Monthly Visits Growth"])) + pct(visits / avg6)) / 2
     s["trend"] = pct(num(s["Trend Score (90 Days)"]))
-    years = (TODAY - pd.to_datetime(s["Founded Date"], errors="coerce")).dt.days / 365.25
+    years = (TODAY - pd.to_datetime(s["Founded Date"], errors="coerce", format="mixed")).dt.days / 365.25
     s["pace"] = pct(num(s["Number of Funding Rounds"]) / years.clip(lower=1))
     s["step"] = pct(s["step_up"])
     s["room"] = s["valuation"].map(room_to_grow)
