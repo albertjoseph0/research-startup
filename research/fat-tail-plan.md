@@ -65,7 +65,21 @@ Each query asks for counts at several thresholds, not medians.
 **Query 2 – which observable signals fatten the tail (~80k).**
 > Same cohort and outcome definition as before. Group the rounds by (a) the ratio of the round's post-money valuation to the company's previous disclosed post-money valuation (under 1.5x, 1.5x to 3x, over 3x, no prior valuation) and (b) whether a lead investor of the round is one of Sequoia Capital, Andreessen Horowitz, Benchmark, Accel, Founders Fund, Lightspeed Venture Partners, Index Ventures, Greylock, Kleiner Perkins, General Catalyst, Thrive Capital, Khosla Ventures. For each group report: number of companies; counts with outcome value at least 2, 5, 10 and 20 times the round's post-money valuation; counts that went public or were acquired within 6 years at a disclosed value at least 5 and 10 times the round's post-money valuation.
 
-**Query 3 – widen the list (~25k, structured search, not an analytical query).** US Series B and C companies valued $300M–$1.5B with 51+ employees.
+**Query 3 – valuations for the widened list (~30k, structured search, not an analytical query).**
+The browser agent saved two Crunchbase searches on 2026-10-30. Export both from the laptop on Nov 1;
+together they need 1,112 of the 2,000 export rows. Both cover US, active, private companies.
+
+| Saved search | Filters | Rows |
+|---|---|---|
+| [Series B companies – 2025 onward](https://www.crunchbase.com/discover/saved/series-b-companies-2025-onward/76a439e5-b326-4188-8be9-dbe58c6084f6) | last round Series B since 2025-01-01, 11–5,000 employees | 843 |
+| [Series C-F companies – under 101 employees](https://www.crunchbase.com/discover/saved/series-c-f-companies-under-101-employees/813f826e-97b4-464d-abd7-c94f66f3b16e) | last round Series C–F, 11–100 employees | 269 |
+
+These replace the earlier Query 3 idea (Series B/C at $300M–$1.5B with 51+ employees), which they
+cover. Laptop exports leave most valuations blank, so the Crunchbase connection fills them instead:
+apply the non-valuation gates first (US, active, private, no recent layoff), then fetch
+post-money valuations with `cb_search_query` for the remaining rows that lack one, at about 60
+tokens a row. Budget about 30k tokens (about 500 rows). If more rows remain, take the ones with
+the strongest web-traffic and hiring signals first.
 
 **Next cycle (December):** tail shape by vintage year (2015–16 versus 2018–19 versus 2020–21) to measure regime dependence, and the "can you tell by year 2" question.
 
