@@ -21,6 +21,14 @@ TOP_INVESTORS = [
     "Khosla Ventures", "Redpoint", "Bessemer Venture Partners", "IVP", "Tiger Global",
     "Y Combinator",
 ]
+# Leads tested on Nov 1 (2015-19 US Series C-E at $300M-1B, cash exits by 2026): rounds led by
+# one of these reached a >=5x cash exit 24.5% of the time (13/53) versus 7.4% (36/488) otherwise.
+# The other TOP_INVESTORS names were not tested, so they count for half.
+TESTED_LEADS = [
+    "Sequoia Capital", "Andreessen Horowitz", "Benchmark", "Accel", "Founders Fund",
+    "Lightspeed Venture Partners", "Index Ventures", "Greylock", "Kleiner Perkins",
+    "General Catalyst", "Thrive Capital", "Khosla Ventures",
+]
 LAYOFF_CUTOFF = "2025-11-01"
 MAX_VALUATION = 10e9
 TODAY = pd.Timestamp("2026-10-30")
@@ -116,7 +124,11 @@ def pct(series):
 
 # Price range where a 5x gain is most reachable. The 2015-19 Series D/E cohorts that most
 # often turned 5x into cash within 4 years joined at median valuations of $327M and $584M.
-SWEET_SPOT = (300e6, 1.5e9)
+# Nov 1 test: cash exits >=5x were 3.0% from $100M-300M Series C-E rounds, 9.1% from $300M-1B,
+# 21.6% from $1B-3B and 12% (4/33) above $3B, so a cheaper entry did not leave more room.
+# The band is wide and the weight small: higher-priced rounds did better, but valuations are
+# disclosed more often for companies that later IPO, which flatters the expensive bands.
+SWEET_SPOT = (500e6, 5e9)
 
 
 def room_to_grow(v):
@@ -148,8 +160,13 @@ REPORTED_REVENUE = {"ARR", "annual revenue", "run-rate", "revenue"}
 EXIT_SIGNAL = r"^ACQUIRED by|^Definitive agreement.*to acquire|^MERGED with|Chapter 11"
 SALE_TALKS = r"M&A talks|sale talks|exploring a sale|in talks to be acquired|hired a banker"
 # Score weights with research inputs. Robustness checks vary each weight by +/-50%.
-WEIGHTS = {"web": 0.15, "hiring": 0.10, "trend": 0.05, "pace": 0.10, "step": 0.10,
-           "room": 0.25, "liquidity": 0.15, "revenue": 0.05, "investors": 0.05}
+# Nov 1 changes: step-up showed no link to cash outcomes (>=5x: 4.5% under 1.5x, 3.6% at 1.5-3x,
+# 5.3% over 3x), top-tier leads tripled the >=5x rate, and most >=5x exits came after year 4,
+# which raises the value of tenders and long exercise windows (liquidity).
+# The lead-investor test rests on 13 events and Crunchbase lists a company's leads across all
+# rounds, not the entry round, so its weight is kept below what the 3x lift alone would suggest.
+WEIGHTS = {"web": 0.15, "hiring": 0.12, "trend": 0.05, "pace": 0.12, "step": 0.03,
+           "room": 0.10, "liquidity": 0.20, "revenue": 0.08, "investors": 0.15}
 AI_INDUSTRIES = r"Artificial Intelligence|Machine Learning|Generative AI|Agentic AI|Foundational AI"
 
 
@@ -278,8 +295,10 @@ def main(companies_path, rounds_path, top40_path, out_path, job1=None, job2=None
     s.loc[estimated, "room"] = (s.loc[estimated, "room"] + 0.5) / 2
     big_revenue = s["Estimated Revenue Range"].isin(["$100M to $500M", "$500M to $1B", "$1B to $10B"])
     s["liquidity"] = (0.5 + 0.2 * big_revenue).clip(upper=1.0)  # IPO tier not exported: neutral 0.5
-    investors = s["Top 5 Investors"].fillna("") + ", " + s["Lead Investors"].fillna("")
-    s["investors"] = investors.map(lambda x: float(any(i in x for i in TOP_INVESTORS)))
+    leads = s["Lead Investors"].fillna("")
+    investors = s["Top 5 Investors"].fillna("") + ", " + leads
+    s["investors"] = np.where(leads.map(lambda x: any(i in x for i in TESTED_LEADS)), 1.0,
+                              investors.map(lambda x: 0.5 * any(i in x for i in TOP_INVESTORS)))
 
     if research.empty:
         # Entry price, not round name, sets the preference: round valuations are 3-5x higher

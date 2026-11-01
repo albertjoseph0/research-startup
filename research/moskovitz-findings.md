@@ -164,18 +164,83 @@ companies). Correlated tries lower the three-try figures further.
   (median), and is fully subscribed at Series C+. Median tender size is $27.6M at
   Series C+ and $5M at Series B and earlier.
 
-## Q1 and Q5. Tail shape by price and which signals matter: open (Nov 1)
+## Q1 and Q5. Tail shape by price and which signals matter: answered (Nov 1)
 
-Rough extrapolation from the 2015–19 tail slopes (paper value). **This overstates
-Series A and B odds (see above).** To be replaced by the Nov 1 queries:
+Cohort: US companies, each company's first Series C, D or E round (or A or B where noted)
+announced 2015–19 with a disclosed post-money valuation. Outcome: an IPO or acquisition at
+a disclosed value, measured against that round's valuation, up to Nov 2026. These are cash
+exits only. Companies still private count as no exit, and so do sales at an undisclosed
+price. Ranges are 95% intervals.
 
-| Joined at | P(≥10×) | P(≥20×) | P(≥33×) | P(≥50×) | P(≥100×) |
+**Q1. Entry price.** A cheaper entry did not leave more room to grow. Higher-priced rounds
+were more likely to end in a large cash exit.
+
+| Entry round | Companies | IPO | Acquired | Closed | ≥2× cash | ≥5× cash | ≥10× cash | ≥20× cash |
+|---|---|---|---|---|---|---|---|---|
+| A–B, $30M–100M | 3,548 | 25 | 934 | 409 | 5.5% | 3.6% (3.0–4.3) | 1.9% (1.5–2.4) | 1.0% (0.8–1.4) |
+| C–E, $100M–300M | 788 | 11 | 311 | 114 | 8.1% | 3.0% (2.1–4.5) | 1.8% (1.1–3.0) | ~0.9% (extrap.) |
+| C–E, $300M–1B | 541 | 71 | 202 | 67 | 17.4% | 9.1% (6.9–11.8) | 3.7% (2.4–5.6) | ~1.9% (extrap.) |
+| C–E, $1B–3B | 185 | 86 | 56 | 16 | 43.8% | 21.6% (16.3–28.1) | 5.9% (3.4–10.3) | ~2.6% (extrap.) |
+| C–E, over $3B | 33 | 19 | 6 | 2 | 42.4% | 12.1% (4.8–27.3) | 3.0% (0.5–15.3) | ~1.0% (extrap.) |
+
+- Tail slope (α, survival curve from 2× up) is about 0.95 at $100M–1B, 1.2 at $1B–3B and
+  0.73 for early rounds. Realised venture tails elsewhere run 1.2–1.4.
+- **Price was a quality signal.** In 2015–19 a $1B+ Series C–E round was the top ~12% of
+  its stage. Today the median Series C is $878M, so the same absolute price no longer
+  marks the same selectivity. Read the lesson as "the premium-priced companies of their
+  stage and year did best," not "$1B–3B is the band."
+- **Bias that flatters the expensive bands.** Valuations are disclosed more often for
+  companies that later IPO (often in their S-1). In the $300M–1B group, 72 companies had
+  no earlier disclosed valuation, and 66 of them exited. Small acquisitions at
+  undisclosed prices are also counted as no exit.
+- **Early rounds:** the slope is fatter, but the level is low and cash is slow. Within
+  this window, 1.0% reached a ≥20× cash exit.
+
+**Q5. Signals,** tested on the $300M–1B Series C–E group.
+
+| Signal | Companies | ≥2× cash | ≥5× cash | ≥10× cash |
+|---|---|---|---|---|
+| Lead investor one of 12 top firms¹ | 53 | 30.2% | 24.5% (14.9–37.6) | 11.3% (5.3–22.6) |
+| Other lead | 488 | 16.0% | 7.4% (5.4–10.0) | 2.9% (1.7–4.8) |
+| Step-up under 1.5× the previous valuation | 88 | 13.6% | 4.5% | 2.3% |
+| Step-up 1.5–3× | 250 | 6.4% | 3.6% | 1.2% |
+| Step-up over 3× | 131 | 8.4% | 5.3% | 0.8% |
+
+¹ Sequoia, a16z, Benchmark, Accel, Founders Fund, Lightspeed, Index, Greylock, Kleiner
+Perkins, General Catalyst, Thrive, Khosla.
+
+- A top-tier lead roughly tripled the rate of ≥5× and ≥10× cash exits. It rests on 13 and
+  6 events, so the true lift could be anywhere from about 2× to 5×.
+- The size of the step-up showed no link to cash outcomes.
+
+**Holding time and market timing** ($300M–1B Series C–E group, by year of the round):
+
+| Round year | Companies | ≥5× cash ever | ≥5× cash within 4 years | ≥10× ever | ≥10× within 4 years |
 |---|---|---|---|---|---|
-| Series A | 18% | 12% | 8% | 6% | 4% |
-| Series B | 13% | 6% | 4% | 3% | 1% |
-| Series C | 8% | 4% | 2% | 1% | 0.6% |
-| Series D | 5% | 2% | 0.8% | 0.4% | 0.1% |
-| Series E | 3% | 1% | 0.4% | 0.2% | <0.1% |
+| 2015–16 | 148 | 12.2% | 1.4% | 5.4% | 0% |
+| 2017 | 88 | 14.8% | 9.1% | 4.5% | 1.1% |
+| 2018–19 | 305 | 5.6% | 4.6% | 2.6% | 2.0% |
+
+- **Big wins take time.** For 2015–16 rounds, 16 of the 18 ≥5× exits came after year 4.
+- **The exit window matters.** The 2017 and 2018–19 groups reached the 2020–21 IPO window
+  inside 4 years; 2015–16 did not. That swung the 4-year odds about 6×, and tries made in
+  the same years rise and fall together.
+- The 2018–19 "ever" figures are lower partly because those companies have had less time.
+
+**Per try, joining a $300M–1B company:**
+- ≥5× cash: about 9% (7–12%).
+- ≥10× cash: about 4% (2–6%).
+- With a top-tier lead: about 25% and 11%.
+
+**Over 3 tries that move together somewhat (correlation 0.3):**
+- At least one ≥10×: about 7% (4–10%).
+- With top-tier leads every time: about 20% (10–38%).
+
+**Not answerable with this data:**
+- **Headcount at the time of joining.** Crunchbase shows only today's headcount, which
+  reflects the outcome. So the 101-employee cut-off can't be tested historically. Keep a
+  floor of about 11 employees as a scale check only.
+- **"Can you tell by year 2"** was not run, to stay within the token budget.
 
 ## What this does to Moskovitz's comparison
 

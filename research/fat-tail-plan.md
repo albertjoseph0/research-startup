@@ -83,6 +83,45 @@ the strongest web-traffic and hiring signals first.
 
 **Next cycle (December):** tail shape by vintage year (2015–16 versus 2018–19 versus 2020–21) to measure regime dependence, and the "can you tell by year 2" question.
 
+## 3b. Nov 1 results and token use
+
+Results are in `moskovitz-findings.md` (Q1 and Q5).
+
+**Token cost.** Each analytical query cost about 19 tokens per company in its cohort,
+plus extra for named entities.
+
+| Query | Cohort | Tokens |
+|---|---|---|
+| C–E $300M–1B, by outcome | 541 | 10,123 |
+| C–E $100M–300M and $1B–3B (2 queries) | 973 | 30,527 |
+| C–E over $3B and A–B $30M–100M (2 queries) | 3,581 | 79,103 |
+| Step-up groups | 541 | 10,268 |
+| Lead investor groups (12 named firms) | 541 | 22,361 |
+| By round year, with 4-year exits | 541 | 9,388 |
+| **Total** | | **161,770 of 200,000** |
+
+The remaining 38,230 tokens are kept to fill valuations for the Nov 1 saved-search
+exports (about 60 tokens a row).
+
+**Lessons for next month:**
+- Keep cohorts under about 1,000 companies; the A–B query alone cost about 65k.
+- Avoid long lists of named investors in a query.
+- Check usage after each query, since the meter lags by a minute or two.
+
+**Scoring changes made from these results** (`score_all.py`):
+
+| Weight | Before | After | Reason |
+|---|---|---|---|
+| step | 0.10 | 0.03 | step-up showed no link to cash outcomes |
+| room | 0.25 | 0.10 | sweet spot widened to $500M–5B; cheaper entries did not do better |
+| investors | 0.05 | 0.15 | top-tier lead roughly tripled ≥5× and ≥10× cash outcomes |
+| liquidity | 0.15 | 0.20 | most big exits came after year 4 |
+
+The investor signal now gives:
+- 1.0 for a company whose leads include one of the 12 tested firms;
+- 0.5 for other well-known investors (untested);
+- 0 otherwise.
+
 ## 4. Browser agent work (free, now)
 
 - `browser-agent-equity-and-benchmarks.md` (grants, terms, published benchmarks), unchanged.
