@@ -13,7 +13,8 @@ roles_path, out_dir = sys.argv[1], sys.argv[2]
 r = pd.read_csv(roles_path)
 
 years = pd.to_numeric(r.years_required.str.extract(r"(\d+)")[0], errors="coerce")
-level = r.level.fillna("").str.lower()
+# "Member of Technical Staff" is a flat title at many AI companies, not the Staff level.
+level = r.level.fillna("").str.lower().str.replace("member of technical staff", "", regex=False)
 any_level = level.str.contains("all levels|early career|mid")
 above = level.str.contains("staff|principal|lead|manager|founding") & ~any_level
 senior = level.str.contains("senior|sr\\.|experienced") & ~any_level
