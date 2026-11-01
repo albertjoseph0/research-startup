@@ -122,6 +122,32 @@ The investor signal now gives:
 - 0.5 for other well-known investors (untested);
 - 0 otherwise.
 
+## 3c. November export (done 2026-11-01)
+
+The 30 Oct saved searches were replaced before exporting:
+- they had no columns set;
+- they were full of low-priced Series B companies;
+- they had more rows than the remaining tokens could value.
+
+The new searches, as exported:
+
+| Saved search | Filters as exported | Rows |
+|---|---|---|
+| Join pool – Series B, round $50M+ (Nov 2026) | Series B since 2025-01-01, 11–5,000 employees, last round **$75M+**. The row budget raised it from $50M; the name still says $50M+. | 167 |
+| Join pool – Series C-F, 11-100 employees, round $50M+ | Series C–F since 2024-11-01, 11–100 employees, last round $50M+ | 131 |
+| Series B–C rounds with valuation, Jan–Dec 2025 | Series B and C rounds, US, disclosed post-money valuation | 928 |
+| Series B–C rounds with valuation, Jan–Jun 2026 | as above | 458 |
+| **Total** | | **1,684 of 2,000** |
+
+**Valuations.**
+- The rounds exports supplied valuations for 277 of the 315 newly scored companies.
+- One structured search (about 3,000 tokens) filled 31 of the remaining 38.
+- 7 have no disclosed valuation and are scored as neutral on price.
+
+**Scoring changes** (`score_all.py`):
+- the 101-employee cut-off is replaced by a floor of 11;
+- duplicate companies across exports are dropped, keeping the newest file's row.
+
 ## 4. Browser agent work (free, now)
 
 - `browser-agent-equity-and-benchmarks.md` (grants, terms, published benchmarks), unchanged.

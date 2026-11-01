@@ -154,7 +154,7 @@ def price_band(v):
 
 # Crunchbase API codes and the labels shown on profile pages.
 ESTIMATED = {"c200_estimated": True, "Estimated": True, "c100_confirmed": False, "Confirmed": False}
-EMPLOYEE_MIDPOINT = {"101-250": 175, "251-500": 375, "501-1000": 750, "1001-5000": 3000}
+EMPLOYEE_MIDPOINT = {"11-50": 30, "51-100": 75, "101-250": 175, "251-500": 375, "501-1000": 750, "1001-5000": 3000}
 REPORTED_REVENUE = {"ARR", "annual revenue", "run-rate", "revenue"}
 # Brute-force research (job3_liquidity.csv) facts that end the private-company bet.
 EXIT_SIGNAL = r"^ACQUIRED by|^Definitive agreement.*to acquire|^MERGED with|Chapter 11"
@@ -223,7 +223,8 @@ def load_research(job1_path, job2_path, job3_path, red_flags_path=None):
 
 def main(companies_path, rounds_path, top40_path, out_path, job1=None, job2=None, job3=None,
          red_flags=None):
-    c = read_all(companies_path)
+    # A company can appear in several exports; list the newest file first so its row wins.
+    c = read_all(companies_path).drop_duplicates("Organization Name URL")
     research = load_research(job1, job2, job3, red_flags) if job1 else pd.DataFrame()
     for col in research:
         c[col] = c["Organization Name URL"].map(research[col])
@@ -266,7 +267,10 @@ def main(companies_path, rounds_path, top40_path, out_path, job1=None, job2=None
     c["excluded"] = ""
     # The original export applied these filters; rows added from other sources may not meet them.
     employees = c["Number of Employees"].fillna("")
-    c.loc[employees.isin(["1-10", "11-50", "51-100"]), "excluded"] = "under 101 employees"
+    # The 101-employee cut-off was never tested and can't be (Crunchbase has only today's
+    # headcount), so from Nov 2026 only a floor of 11 remains, as a check that the company
+    # is real and operating.
+    c.loc[employees.isin(["1-10"]), "excluded"] = "under 11 employees"
     c.loc[~c["Headquarters Location"].fillna("").str.endswith("United States"), "excluded"] = "not US-headquartered"
     c.loc[c["IPO Status"].fillna("") != "Private", "excluded"] = "not private"
     c.loc[c["Operating Status"].fillna("") != "Active", "excluded"] = "not active"
