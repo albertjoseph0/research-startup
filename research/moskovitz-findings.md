@@ -288,6 +288,62 @@ after their round, then count cash exits at any time up to now. Ranges are 95% i
 This supports the "keep only winners" rule and the "no new round in 2 years" fragility
 screen.
 
+## Checks from Taleb, *Statistical Consequences of Fat Tails* (arXiv 2001.10488, 3rd ed. 2025)
+
+Five results from the book apply directly. Each was checked against our numbers.
+
+**1. Compare payoffs, not probabilities (ch. 11).** Taleb shows that ranking by the chance of
+crossing a threshold (a "binary" view) can disagree with ranking by payoff (a "vanilla" view)
+when tails differ, and that "one should never operate in probability space". An employee's
+grant pays like an option, so `tail_payoff.py` recomputes every group's expected cash payoff
+above 2×, per $1 of grant value.
+- Between observed thresholds it interpolates the survival curve on log-log axes.
+- Above 10× it uses tail exponents of 1.1–1.5.
+- It caps outcomes at 100×, 300× or 1,000× the entry price.
+
+| Group | P(≥5× cash) | Expected payoff above 2×, per $1 of grant (cap 300×) | Rank by probability | Rank by payoff |
+|---|---|---|---|---|
+| C–E $300M–1B, top-tier lead | 24.5% | 3.5–4.9 | 1 | 1 |
+| C–E $1B–3B | 21.6% | 2.4–3.2 | 2 | 2 |
+| C–E over $3B | 12.1% | 1.5–1.8 | 3 | 3 |
+| C–E $300M–1B | 9.1% | 1.3–1.7 | 4 | 4 |
+| C–E $300M–1B, other lead | 7.4% | 1.0–1.4 | 5 | 5 |
+| A–B $30M–100M | 3.6% | 0.7–0.9 | 6 | 6 |
+| C–E $100M–300M | 3.0% | 0.6–0.8 | 7 | 7 |
+| Year 2: raised again | 18.8% | 2.3–3.1 | – | – |
+| Year 2: no round, no exit | 1.7% | 0.2–0.3 | – | – |
+
+**Result:** the order is identical under both views, so the price, lead-investor and year-2
+conclusions survive this check. The figures count only cash exits above 2×; still-private
+companies count as zero.
+
+**2. Expected values are mostly hidden (ch. 9, ch. 17).** For tail exponents of 1.1–1.5 and
+samples of 100–10,000, a large share of the true mean lies above the largest value observed
+(Taleb, figs. 9.7–9.8). The payoffs above confirm this. Raising the cap from 100× to 1,000×
+adds 15–60% to every group's payoff, and that range is set by outcomes almost never seen in
+the data. So expected value can't justify a decision here. Taleb's "shadow mean" handles this
+by bounding the support, which is what the cap does. Use the chance of at least one large
+cash outcome, and avoid ruin, rather than an average.
+
+**3. Three tries are nowhere near enough to average (ch. 8).** Taleb's κ measures how fast
+averages settle. A Pareto tail with α = 1.25 has κ ≈ 0.83, and matching the stability that a
+Gaussian reaches with 30 observations takes about 4×10⁸ observations (eq. 8.8; at α = 1.5,
+about 2×10⁵). A career of 3 tries is a draw from the tail, not an average of it. That's why
+this analysis reports "at least one ≥10× in N tries" and never an expected payoff per year.
+
+**4. Uncertainty about α fattens the tail (ch. 20–21).** When the tail exponent itself is
+uncertain, the true tail is fatter than the one at the average α, by Jensen's inequality. So
+for the extrapolated 20× and 50× odds, the low-α end of the stress range is the more realistic
+one. The ≥5× and ≥10× figures are observed counts and aren't affected.
+
+**5. Lindy and the absorbing barrier (ch. 23).** Taleb models survival as distance from an
+absorbing barrier. A process with zero drift has power-law ("Lindy") survival, but any amount
+of negative drift turns it into a fast exit. For a startup, the barrier is running out of cash
+and the drift is burn net of new money. This explains the year-2 result: a company that
+hasn't raised in 2 years is drifting toward the barrier, and its odds of a 5× exit fall to
+about 1–2%. In practice, the questions that measure distance and drift are how many months of
+cash the company has and how much it burns. Both are already on the interview list.
+
 ## What this does to Moskovitz's comparison
 
 - **His risk claim holds.** Employee stock is very likely worth more than $0 if the

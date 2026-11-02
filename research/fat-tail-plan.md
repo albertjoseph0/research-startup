@@ -152,6 +152,13 @@ The new searches, as exported:
 - the 101-employee cut-off is replaced by a floor of 11;
 - duplicate companies across exports are dropped, keeping the newest file's row.
 
+## 3d. Taleb checks (Nov 2)
+
+`tail_payoff.py` compares groups by expected payoff above 2× per $1 of grant, capped at
+100×/300×/1,000× and with tail exponents of 1.1–1.5 above 10×. It ranks every Nov 1 group,
+and the year-2 groups, in the same order as P(≥5×), so the conclusions hold under Taleb's
+binary-versus-vanilla critique. Details are in `moskovitz-findings.md`.
+
 ## 4. Browser agent work (free, now)
 
 - `browser-agent-equity-and-benchmarks.md` (grants, terms, published benchmarks), unchanged.
