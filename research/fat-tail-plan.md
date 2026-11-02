@@ -98,7 +98,11 @@ plus extra for named entities.
 | Step-up groups | 541 | 10,268 |
 | Lead investor groups (12 named firms) | 541 | 22,361 |
 | By round year, with 4-year exits | 541 | 9,388 |
-| **Total** | | **161,770 of 200,000** |
+| **Total, Nov 1** | | **161,770 of 200,000** |
+| Valuation lookup for 38 companies (Nov 1) | 38 | 3,240 |
+| Year-2 test, $300M–1B group (Nov 2) | 541 | 17,235 |
+| Year-2 test, $1B–3B group (Nov 2) | 185 | 8,448 |
+| **Total, November** | | **190,693 of 200,000** |
 
 The remaining 38,230 tokens are kept to fill valuations for the Nov 1 saved-search
 exports (about 60 tokens a row).
@@ -202,9 +206,11 @@ the Game* and *Antifragile*:
 
 1. **Fixed option budget.** Decide in advance the most cash you will ever spend buying
    options, plus the tax on them. Never borrow for it.
-2. **Keep only winners.** When leaving a company, buy vested options only if it shows
-   winning signals: a new round at a higher valuation, a tender above the previous
-   price, or fast revenue growth. Otherwise let them go.
+2. **Keep only winners, and check at year 2.** Look at each company 2 years after you
+   join. If it has raised a new round (or run a tender above the previous price), its odds
+   of a 5× cash exit were about 15–28% in the 2015–19 data. If it has neither raised nor
+   exited, they were about 1.5–3%. In that case, leave, and don't spend cash buying its
+   options. (Nov 2 queries, `moskovitz-findings.md`.)
 3. **Prefer long exercise windows and tender offers.** They let you keep the tail
    without spending the budget early. Ask about both at every offer.
 4. **Sell part, keep part.** When a tender comes, sell some (median tenders allow about

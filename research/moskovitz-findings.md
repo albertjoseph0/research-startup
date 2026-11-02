@@ -242,6 +242,52 @@ Perkins, General Catalyst, Thrive, Khosla.
   floor of about 11 employees as a scale check only.
 - **"Can you tell by year 2"** was not run, to stay within the token budget.
 
+## Can you tell by year 2? Yes (Nov 2 queries)
+
+**The question.** Same cohort as Q1. Group companies by what happened in the 24 months
+after their round, then count cash exits at any time up to now. Ranges are 95% intervals.
+
+**$300M–1B group:**
+
+| In the 24 months after the round | Companies | ≥2× cash | ≥5× cash | ≥10× cash |
+|---|---|---|---|---|
+| Raised again at a higher disclosed valuation | 211 | 21.8% | 15.6% (11.4–21.2) | 6.6% (4.0–10.8) |
+| Raised again, valuation not disclosed | 84 | 19.0% | 13.1% (7.5–21.9) | 4.8% |
+| Raised again at the same or a lower valuation | 7 | 0 | 0 | 0 |
+| No new round and no exit | 199 | 5.5% | 1.5% (0.5–4.3) | 0.5% |
+| Sold or went public within 24 months | 40 | 32.5% | 2.5% | 2.5% |
+
+**$1B–3B group:**
+
+| In the 24 months after the round | Companies | ≥5× cash | ≥10× cash |
+|---|---|---|---|
+| Raised again | 126 | 27.8% (20.7–36.2) | 7.9% |
+| No new round and no exit | 33 | 3.0% | 0 |
+| Sold or went public within 24 months | 26 | 11.5% | 3.8% |
+
+**What it shows.**
+
+- **Raising again is the signal.** Across both groups, a company that raised again within
+  2 years reached a ≥5× cash exit 18.8% of the time (79 of 421). One that neither raised nor
+  exited managed it 1.7% of the time (4 of 232). That is about a tenfold gap. At ≥10× it is
+  6.7% against 0.4%.
+- **The valuation isn't needed.** Rounds with an undisclosed valuation did about as well as
+  disclosed up-rounds (13.1% against 15.6%).
+- **Early exits are mostly small.** Sales or IPOs within 2 years often returned 2×, but
+  rarely 5×.
+- **Caveat.** "Raised again" partly means "still alive and wanted by investors", which is
+  exactly the information an employee has at year 2. Disclosure bias (see Q1) applies here
+  too.
+
+**What it means for one employee.** Checking at year 2 is a nearly free filter.
+- If the company has not raised a new round (or been sold) by then, its chance of a 5× cash
+  exit falls to about 1–2%. Leave, and don't spend cash buying its options.
+- If it has raised again, the chance rises to roughly 15–28%. That's the case for staying, or
+  for buying your vested options if you leave.
+
+This supports the "keep only winners" rule and the "no new round in 2 years" fragility
+screen.
+
 ## What this does to Moskovitz's comparison
 
 - **His risk claim holds.** Employee stock is very likely worth more than $0 if the
