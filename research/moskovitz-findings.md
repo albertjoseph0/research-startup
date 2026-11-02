@@ -320,7 +320,7 @@ companies count as zero.
 **2. Expected values are mostly hidden (ch. 9, ch. 17).** For tail exponents of 1.1–1.5 and
 samples of 100–10,000, a large share of the true mean lies above the largest value observed
 (Taleb, figs. 9.7–9.8). The payoffs above confirm this. Raising the cap from 100× to 1,000×
-adds 15–60% to every group's payoff, and that range is set by outcomes almost never seen in
+adds about 15–50% to every group's payoff, and that range is set by outcomes almost never seen in
 the data. So expected value can't justify a decision here. Taleb's "shadow mean" handles this
 by bounding the support, which is what the cap does. Use the chance of at least one large
 cash outcome, and avoid ruin, rather than an average.
