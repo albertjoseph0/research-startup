@@ -103,6 +103,7 @@ plus extra for named entities.
 | Year-2 test, $300M–1B group (Nov 2) | 541 | 17,235 |
 | Year-2 test, $1B–3B group (Nov 2) | 185 | 8,448 |
 | **Total, November** | | **190,693 of 200,000** |
+| Defense/aerospace company search and valuations (Nov 6; allowance raised to 500k) | 171 + 195 rows | 25,400 |
 
 The remaining 38,230 tokens are kept to fill valuations for the Nov 1 saved-search
 exports (about 60 tokens a row).
