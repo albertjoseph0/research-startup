@@ -288,6 +288,53 @@ after their round, then count cash exits at any time up to now. Ranges are 95% i
 This supports the "keep only winners" rule and the "no new round in 2 years" fragility
 screen.
 
+## Re-test on 2010–14 rounds (Nov 6)
+
+**The question.** Do the 2015–19 findings hold in an earlier, independent set of companies
+that has had more time to exit? This set is US companies whose first Series C, D or E round
+came in 2010–14, with a disclosed valuation, counting cash exits up to Nov 2026. Fewer
+valuations were published then, so the groups are smaller.
+
+**Entry price:**
+
+| Valued at the round | Companies | ≥2× cash | ≥5× cash | ≥10× cash |
+|---|---|---|---|---|
+| $100M–300M | 283 | 12.0% | 6.7% (4.3–10.2) | 2.8% |
+| $300M–1B | 67 | 29.9% | 6.0% (2.3–14.4) | 4.5% |
+| $1B–3B | 22 | 50.0% | 27.3% (13.2–48.2) | 18.2% |
+| over $3B | 6 | 33% | 0 | 0 |
+
+**Lead investor** ($100M–3B rounds):
+
+| Lead investor | Companies | ≥2× cash | ≥5× cash | ≥10× cash |
+|---|---|---|---|---|
+| One of the 12 top-tier firms | 42 | 35.7% | 26.2% (15.3–41.1) | 19.0% |
+| Other | 331 | 15.1% | 5.4% (3.5–8.4) | 2.1% |
+
+**Year 2** ($100M–3B rounds):
+
+| In the 24 months after the round | Companies | ≥5× cash | ≥10× cash |
+|---|---|---|---|
+| Raised again | 247 | 9.3% (6.3–13.6) | 5.7% |
+| No new round, no exit | 116 | 2.6% (0.9–7.3) | 0 |
+| Sold or went public | 10 | 20% | 0 |
+
+**What replicated.**
+- **Top-tier lead: yes, strongly.** About five times the ≥5× rate and nine times the ≥10×
+  rate. Across both sets it is 25.3% (24 of 95) against 6.6% (54 of 819) at ≥5×, and 14.7%
+  against 2.6% at ≥10×. This is now the best-supported signal in the analysis.
+- **Year 2: yes, more weakly.** 9.3% against 2.6% at ≥5× (15.3% against 2.0% across both
+  sets).
+- **Price: only at the top.** $1B–3B rounds again did best (27%). But $100M–300M and
+  $300M–1B were the same (about 6%), so the steady rise with price seen in 2015–19 didn't
+  repeat. The companies priced at the top of their era stood out; below that, price told
+  little. The payoff check (`tail_payoff.py`) agrees: it ranks $1B–3B and top-tier-lead
+  rounds far above the rest, and swaps the two lower bands.
+
+**Scoring changes** (`score_all.py`):
+- the investor weight rises from 0.15 to 0.20;
+- the price weight falls from 0.10 to 0.05.
+
 ## Checks from Taleb, *Statistical Consequences of Fat Tails* (arXiv 2001.10488, 3rd ed. 2025)
 
 Five results from the book apply directly. Each was checked against our numbers.

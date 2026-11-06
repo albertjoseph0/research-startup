@@ -163,10 +163,12 @@ SALE_TALKS = r"M&A talks|sale talks|exploring a sale|in talks to be acquired|hir
 # Nov 1 changes: step-up showed no link to cash outcomes (>=5x: 4.5% under 1.5x, 3.6% at 1.5-3x,
 # 5.3% over 3x), top-tier leads tripled the >=5x rate, and most >=5x exits came after year 4,
 # which raises the value of tenders and long exercise windows (liquidity).
-# The lead-investor test rests on 13 events and Crunchbase lists a company's leads across all
-# rounds, not the entry round, so its weight is kept below what the 3x lift alone would suggest.
+# Nov 6 re-test on 2010-14 rounds: a top-tier lead again lifted >=5x cash exits (26.2% vs 5.4%),
+# so across both cohorts it is 24/95 vs 54/819. Price did not replicate below $1B (6.7% at
+# $100M-300M, 6.0% at $300M-1B, 27% at $1B-3B), so price weighs less. Leads are still listed
+# across all rounds, not just the entry round, which keeps that weight short of the full lift.
 WEIGHTS = {"web": 0.15, "hiring": 0.12, "trend": 0.05, "pace": 0.12, "step": 0.03,
-           "room": 0.10, "liquidity": 0.20, "revenue": 0.08, "investors": 0.15}
+           "room": 0.05, "liquidity": 0.20, "revenue": 0.08, "investors": 0.20}
 AI_INDUSTRIES = r"Artificial Intelligence|Machine Learning|Generative AI|Agentic AI|Foundational AI"
 
 
